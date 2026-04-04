@@ -5,7 +5,7 @@ import * as z from "zod";
 import {
   Loader2, X, Smartphone, KeyRound, ShieldCheck, ArrowRight,
   CheckCircle2, Settings, Lock, ExternalLink, Hash, RotateCcw,
-  Globe, Clock,
+  Globe, Clock, Megaphone, Search, Bug, LayoutDashboard, User,
 } from "lucide-react";
 import { TelegramIcon } from "@/components/ui/telegram-icon";
 import { useQueryClient } from "@tanstack/react-query";
@@ -167,7 +167,9 @@ export function AuthModal({ onClose, onSuccess }: AuthModalProps) {
   }, [configLoaded, hasCredentials, step]);
 
   const phoneForm = useForm<{ phone: string }>({
-    resolver: zodResolver(z.object({ phone: z.string().min(7, "Введіть номер телефону") })),
+    resolver: zodResolver(z.object({
+      phone: z.string().regex(/^\+\d{10,15}$/, "Формат: +380XXXXXXXXX (лише цифри після +)"),
+    })),
     defaultValues: { phone: "" },
   });
   const passwordForm = useForm<{ password: string }>({
@@ -480,15 +482,6 @@ export function AuthModal({ onClose, onSuccess }: AuthModalProps) {
                 ))}
               </div>
 
-              <div className="flex items-center justify-between px-3 py-2.5 rounded-xl"
-                style={{
-                  background: "linear-gradient(135deg, hsl(271 91% 65% / 0.10), hsl(316 90% 62% / 0.06))",
-                  border: "1px solid hsl(271 91% 65% / 0.28)",
-                }}>
-                <span className="text-[11px] font-display font-semibold uppercase tracking-wider" style={{ color: "hsl(271 91% 65%)" }}>Приклад</span>
-                <span className="text-[14px] font-mono font-bold text-white tracking-wide">+380961234567</span>
-              </div>
-
               <form onSubmit={phoneForm.handleSubmit(handleSendCode)} className="flex flex-col gap-3">
                 <InputField label="Номер телефону" error={phoneForm.formState.errors.phone?.message}>
                   <input
@@ -644,19 +637,27 @@ export function AuthModal({ onClose, onSuccess }: AuthModalProps) {
 
               <div className="flex flex-col gap-1">
                 <h3 className="font-display font-black text-[22px] text-white">Авторизація успішна!</h3>
-                <p className="text-[13px]" style={{ color: SUB }}>
-                  {authStatus?.firstName ? `👤 ${authStatus.firstName}${authStatus.username ? ` · @${authStatus.username}` : ""}` : "Акаунт підключено"}
-                </p>
+                {authStatus?.firstName && (
+                  <div className="flex items-center justify-center gap-1.5">
+                    <User style={{ color: SUB, width: 13, height: 13 }} />
+                    <p className="text-[13px]" style={{ color: SUB }}>
+                      {authStatus.firstName}{authStatus.username ? ` · @${authStatus.username}` : ""}
+                    </p>
+                  </div>
+                )}
               </div>
 
               <div className="w-full flex flex-col gap-1.5 text-left">
-                {[
-                  "📢 Розсилки — надсилання від вашого імені",
-                  "🔍 OSINT — пошук та аналіз груп",
-                  "🕷️ Парсери — збір учасників та даних",
-                ].map(line => (
-                  <div key={line} className="flex items-center gap-2 px-3 py-2 rounded-xl" style={card}>
-                    <p className="text-[13px]" style={{ color: SUB }}>{line}</p>
+                {([
+                  { icon: Megaphone, label: "Розсилки — надсилання від вашого імені" },
+                  { icon: Search,    label: "OSINT — пошук та аналіз груп" },
+                  { icon: Bug,       label: "Парсери — збір учасників та даних" },
+                ] as { icon: React.FC<any>; label: string }[]).map(({ icon: Icon, label }) => (
+                  <div key={label} className="flex items-center gap-2.5 px-3 py-2 rounded-xl" style={card}>
+                    <div className="w-6 h-6 rounded-lg flex items-center justify-center shrink-0" style={iconWrap}>
+                      <Icon style={{ color: PRI, width: 12, height: 12 }} />
+                    </div>
+                    <p className="text-[12px]" style={{ color: SUB }}>{label}</p>
                   </div>
                 ))}
                 <p className="text-[11px] text-center mt-1" style={{ color: DIM }}>
@@ -667,7 +668,7 @@ export function AuthModal({ onClose, onSuccess }: AuthModalProps) {
               <button onClick={onSuccess}
                 className="w-full py-3.5 rounded-2xl font-display font-bold text-sm flex items-center justify-center gap-2"
                 style={gradBtn}>
-                🚀 Відкрити панель керування
+                <LayoutDashboard className="h-4 w-4" /> Відкрити панель керування
               </button>
             </div>
           )}
@@ -692,13 +693,16 @@ export function AuthModal({ onClose, onSuccess }: AuthModalProps) {
               </div>
 
               <div className="flex flex-col gap-1.5">
-                {[
-                  "📢 Розсилки — надсилання від вашого імені",
-                  "🔍 OSINT — пошук та аналіз груп",
-                  "🕷️ Парсери — збір учасників та даних",
-                ].map(line => (
-                  <div key={line} className="flex items-center gap-2 px-3 py-2 rounded-xl" style={card}>
-                    <p className="text-[13px]" style={{ color: SUB }}>{line}</p>
+                {([
+                  { icon: Megaphone, label: "Розсилки — надсилання від вашого імені" },
+                  { icon: Search,    label: "OSINT — пошук та аналіз груп" },
+                  { icon: Bug,       label: "Парсери — збір учасників та даних" },
+                ] as { icon: React.FC<any>; label: string }[]).map(({ icon: Icon, label }) => (
+                  <div key={label} className="flex items-center gap-2.5 px-3 py-2 rounded-xl" style={card}>
+                    <div className="w-6 h-6 rounded-lg flex items-center justify-center shrink-0" style={iconWrap}>
+                      <Icon style={{ color: PRI, width: 12, height: 12 }} />
+                    </div>
+                    <p className="text-[12px]" style={{ color: SUB }}>{label}</p>
                   </div>
                 ))}
               </div>
@@ -710,7 +714,7 @@ export function AuthModal({ onClose, onSuccess }: AuthModalProps) {
               <button onClick={onSuccess}
                 className="w-full py-3.5 rounded-2xl font-display font-bold text-sm flex items-center justify-center gap-2"
                 style={gradBtn}>
-                🚀 Панель керування
+                <LayoutDashboard className="h-4 w-4" /> Панель керування
               </button>
 
               <button onClick={handleLogout} disabled={logout.isPending}

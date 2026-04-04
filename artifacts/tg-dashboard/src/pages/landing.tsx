@@ -138,8 +138,8 @@ export default function Landing() {
       {/* ── TOP: Logo only ── */}
       <div className="relative z-20 shrink-0 px-5 pt-4 pb-0 max-w-lg mx-auto w-full">
         <div className="flex items-center gap-2.5">
-          <div style={{ ...logoIcon, width: 18, height: 18, borderRadius: 5 }}>
-            <TelegramIcon className="text-white" style={{ width: 11, height: 11 }} />
+          <div style={{ ...logoIcon, width: 20, height: 20, borderRadius: 5 }}>
+            <TelegramIcon className="text-white" style={{ width: 12, height: 12 }} />
           </div>
           <span className="font-display font-black" style={{ fontSize: "clamp(1.15rem, 5.5vw, 1.45rem)" }}>
             <span className="text-white">GROUP </span>

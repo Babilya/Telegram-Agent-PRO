@@ -123,6 +123,7 @@ router.post("/campaigns/:id/start", async (req, res) => {
       .where(eq(campaignsTable.id, id));
 
     try {
+      const { delaySeconds = 5 } = req.body;
       const response = await fetch(`${PYTHON_SERVICE_URL}/campaigns/start`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -131,6 +132,7 @@ router.post("/campaigns/:id/start", async (req, res) => {
             ...campaign,
             targetGroupIds: Array.isArray(campaign.targetGroupIds) ? campaign.targetGroupIds : [],
             status: "active",
+            delaySeconds,
           }
         }),
       });

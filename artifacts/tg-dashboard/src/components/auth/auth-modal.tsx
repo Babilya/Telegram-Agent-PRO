@@ -46,6 +46,7 @@ export function AuthModal({ onClose, onSuccess }: AuthModalProps) {
   const queryClient = useQueryClient();
   const [step, setStep] = useState<Step>("apiid");
   const [phoneNumber, setPhoneNumber] = useState("");
+  const [phoneCodeHash, setPhoneCodeHash] = useState("");
   const [codeDisplay, setCodeDisplay] = useState("");
   const [apiIdInput, setApiIdInput] = useState("");
 
@@ -82,6 +83,7 @@ export function AuthModal({ onClose, onSuccess }: AuthModalProps) {
       onSuccess: (res) => {
         if (res.success) {
           setPhoneNumber(phone);
+          setPhoneCodeHash((res as any).phoneCodeHash ?? "");
           setStep("code");
         } else {
           toast({ title: "Помилка", description: res.message, variant: "destructive" });
@@ -92,7 +94,7 @@ export function AuthModal({ onClose, onSuccess }: AuthModalProps) {
   };
 
   const onCodeSubmit = ({ code }: { code: string }) => {
-    verifyCode.mutate({ data: { phone: phoneNumber, code, phoneCodeHash: "hash" } }, {
+    verifyCode.mutate({ data: { phone: phoneNumber, code, phoneCodeHash } }, {
       onSuccess: (res) => {
         if (res.success) {
           if (res.requiresPassword) {

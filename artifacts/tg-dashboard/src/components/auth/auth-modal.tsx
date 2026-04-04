@@ -44,7 +44,7 @@ const stepInfo: Record<Step, { icon: React.FC<any>; label: string }> = {
 export function AuthModal({ onClose, onSuccess }: AuthModalProps) {
   const { toast } = useToast();
   const queryClient = useQueryClient();
-  const [step, setStep] = useState<Step>("apiid");
+  const [step, setStep] = useState<Step | null>(null);
   const [phoneNumber, setPhoneNumber] = useState("");
   const [phoneCodeHash, setPhoneCodeHash] = useState("");
   const [codeDisplay, setCodeDisplay] = useState("");
@@ -54,9 +54,9 @@ export function AuthModal({ onClose, onSuccess }: AuthModalProps) {
     fetch("/api/auth/config")
       .then(r => r.json())
       .then((cfg: { hasCredentials: boolean }) => {
-        if (cfg.hasCredentials) setStep("intro");
+        setStep(cfg.hasCredentials ? "intro" : "apiid");
       })
-      .catch(() => {});
+      .catch(() => setStep("intro"));
   }, []);
 
   const { data: authStatus } = useGetAuthStatus({ query: { queryKey: getGetAuthStatusQueryKey() } });
@@ -139,7 +139,7 @@ export function AuthModal({ onClose, onSuccess }: AuthModalProps) {
     ? ["phone", "code", "password", "success"]
     : ["phone", "code", "success"]) as Step[];
 
-  const stepIndex = visibleSteps.indexOf(step);
+  const stepIndex = step ? visibleSteps.indexOf(step) : -1;
 
   const subColor = "hsl(258 15% 72%)";
   const inputCls = "w-full px-4 py-3 rounded-2xl text-sm text-white outline-none transition-all";
@@ -169,7 +169,7 @@ export function AuthModal({ onClose, onSuccess }: AuthModalProps) {
               Авторизація Telegram
             </span>
             <h2 className="text-[17px] font-display font-black text-white leading-tight">
-              {stepInfo[step].label}
+              {step ? stepInfo[step].label : "…"}
             </h2>
           </div>
           <button onClick={onClose}
@@ -196,6 +196,13 @@ export function AuthModal({ onClose, onSuccess }: AuthModalProps) {
 
         {/* Content */}
         <div className="px-4 pt-2 pb-5">
+
+          {/* ── LOADING ── */}
+          {step === null && (
+            <div className="flex items-center justify-center py-8">
+              <Loader2 className="h-6 w-6 animate-spin" style={{ color: "hsl(271 91% 65%)" }} />
+            </div>
+          )}
 
           {/* ── API ID ── */}
           {step === "apiid" && (

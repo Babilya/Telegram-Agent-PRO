@@ -4,6 +4,7 @@ import {
   Search, Users, Megaphone, Clock, Zap,
   ShieldCheck, Smartphone, KeyRound, ArrowRight,
 } from "lucide-react";
+import { AuthModal } from "@/components/auth/auth-modal";
 
 const TOTAL_PAGES = 3;
 
@@ -100,15 +101,17 @@ const pages = [
 
 export default function Landing() {
   const [page, setPage] = useState(0);
+  const [showAuth, setShowAuth] = useState(false);
   const [, setLocation] = useLocation();
   const current = pages[page];
 
   const next = () => {
     if (page < TOTAL_PAGES - 1) setPage(page + 1);
-    else setLocation("/dashboard");
+    else setShowAuth(true);
   };
 
   return (
+    <>
     <div
       className="flex flex-col"
       style={{
@@ -233,5 +236,13 @@ export default function Landing() {
         </div>
       </div>
     </div>
+
+    {showAuth && (
+      <AuthModal
+        onClose={() => setShowAuth(false)}
+        onSuccess={() => setLocation("/dashboard")}
+      />
+    )}
+    </>
   );
 }

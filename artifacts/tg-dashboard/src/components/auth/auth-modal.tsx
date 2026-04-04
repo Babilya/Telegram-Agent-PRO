@@ -151,12 +151,11 @@ export function AuthModal({ onClose, onSuccess }: AuthModalProps) {
       <div
         className="relative w-full max-w-md rounded-3xl overflow-hidden flex flex-col"
         style={{
-          background: "hsl(258 38% 9% / 0.92)",
-          backdropFilter: "blur(32px)",
-          WebkitBackdropFilter: "blur(32px)",
-          border: "1px solid rgba(255,255,255,0.09)",
-          boxShadow: "0 24px 64px rgba(0,0,0,0.55), inset 0 1px 0 rgba(255,255,255,0.07)",
-          maxHeight: "90dvh",
+          background: "hsl(258 38% 9% / 0.95)",
+          backdropFilter: "blur(40px)",
+          WebkitBackdropFilter: "blur(40px)",
+          boxShadow: "0 32px 80px rgba(0,0,0,0.72), 0 0 0 1px rgba(255,255,255,0.06), 0 0 60px hsl(271 91% 65% / 0.12), inset 0 1px 0 rgba(255,255,255,0.08)",
+          maxHeight: "88dvh",
         }}
       >
         {/* Header */}
@@ -227,24 +226,27 @@ export function AuthModal({ onClose, onSuccess }: AuthModalProps) {
                   </button>
                 </div>
               ) : (
-                <div className="flex flex-col gap-4">
-                  <div className="flex flex-col gap-3">
-                    {[
-                      { emoji: "🔐", title: "Що це?", desc: "GROUP AGENT використовує ваш Telegram акаунт для пошуку груп, автовступу та розсилок — без сторонніх сервісів." },
-                      { emoji: "📱", title: "Що потрібно?", desc: "Лише номер телефону вашого Telegram. Код підтвердження надійде прямо в додаток." },
-                      { emoji: "🛡️", title: "Безпечно?", desc: "Сесія зберігається на сервері. Ніхто, крім вас, не має доступу до акаунту." },
-                      { emoji: "⚡", title: "Кому підходить?", desc: "Telegram Business або Premium акаунт — для масових дій без обмежень." },
-                    ].map(({ emoji, title, desc }) => (
-                      <div key={title} className="flex items-start gap-3 p-3.5 rounded-2xl"
-                        style={{ background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.07)" }}>
-                        <span className="text-xl shrink-0">{emoji}</span>
-                        <div>
-                          <p className="font-display font-bold text-white text-sm leading-tight">{title}</p>
-                          <p className="text-xs leading-relaxed mt-0.5" style={{ color: "hsl(258 15% 75%)" }}>{desc}</p>
-                        </div>
+                <div className="flex flex-col gap-3">
+                  {[
+                    { emoji: "🔐", title: "Що це?", desc: "GROUP AGENT використовує ваш Telegram акаунт для пошуку груп, автовступу та розсилок — без сторонніх сервісів." },
+                    { emoji: "📱", title: "Що потрібно?", desc: "Лише номер телефону вашого Telegram. Код підтвердження надійде прямо в додаток." },
+                    { emoji: "🛡️", title: "Безпечно?", desc: "Сесія зберігається на сервері. Ніхто, крім вас, не має доступу до акаунту." },
+                    { emoji: "⚡", title: "Кому підходить?", desc: "Telegram Business або Premium акаунт — для масових дій без обмежень." },
+                  ].map(({ emoji, title, desc }) => (
+                    <div key={title} className="flex items-start gap-3 px-3 py-2.5 rounded-2xl"
+                      style={{ background: "rgba(255,255,255,0.04)" }}>
+                      <span className="text-lg shrink-0 leading-tight mt-0.5">{emoji}</span>
+                      <div>
+                        <p className="font-display font-bold text-white text-sm leading-tight">{title}</p>
+                        <p className="text-xs leading-relaxed mt-0.5" style={{ color: "hsl(258 15% 75%)" }}>{desc}</p>
                       </div>
-                    ))}
-                  </div>
+                    </div>
+                  ))}
+                  <button onClick={() => setStep("phone")}
+                    className="w-full py-3.5 rounded-2xl font-display font-bold text-sm flex items-center justify-center gap-2 mt-1"
+                    style={convexBtn}>
+                    <Smartphone className="h-4 w-4" /> Продовжити
+                  </button>
                 </div>
               )}
             </div>
@@ -269,7 +271,7 @@ export function AuthModal({ onClose, onSuccess }: AuthModalProps) {
                   <input
                     {...phoneForm.register("phone")}
                     placeholder="+380XXXXXXXXX"
-                    className="w-full px-4 py-3 rounded-xl font-mono text-sm text-white outline-none transition-all"
+                    className="w-full px-4 py-3 rounded-xl text-sm text-white outline-none transition-all"
                     style={{
                       background: "rgba(255,255,255,0.06)",
                       border: "1px solid rgba(255,255,255,0.12)",
@@ -413,17 +415,6 @@ export function AuthModal({ onClose, onSuccess }: AuthModalProps) {
           )}
         </div>
 
-        {/* Bottom button for intro step */}
-        {step === "intro" && !authStatus?.authenticated && (
-          <div className="px-5 pb-6 pt-3 shrink-0"
-            style={{ borderTop: "1px solid rgba(255,255,255,0.07)" }}>
-            <button onClick={() => setStep("phone")}
-              className="w-full py-3.5 rounded-2xl font-display font-bold text-sm flex items-center justify-center gap-2"
-              style={convexBtn}>
-              <Smartphone className="h-4 w-4" /> Продовжити
-            </button>
-          </div>
-        )}
       </div>
     </div>
   );

@@ -58,9 +58,7 @@ function Router() {
           <Jobs />
         </Layout>
       </Route>
-      <Route path="/">
-        {hasSeenLanding ? <Redirect to="/dashboard" /> : <Redirect to="/welcome" />}
-      </Route>
+      <Route path="/" component={Landing} />
       <Route component={NotFound} />
     </Switch>
   );

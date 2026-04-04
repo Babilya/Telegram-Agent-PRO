@@ -232,35 +232,31 @@ export function AuthModal({ onClose, onSuccess }: AuthModalProps) {
                 <div className="flex flex-col gap-2">
                   {[
                     {
-                      icon: <Bot className="h-[15px] w-[15px] text-white" />,
-                      bg: "linear-gradient(135deg, hsl(271 80% 55%), hsl(271 91% 45%))",
+                      icon: Bot,
                       title: "Що це?",
                       desc: "GROUP AGENT використовує ваш Telegram акаунт для пошуку груп, автовступу та розсилок — без сторонніх сервісів.",
                     },
                     {
-                      icon: <Fingerprint className="h-[15px] w-[15px] text-white" />,
-                      bg: "linear-gradient(135deg, hsl(220 85% 55%), hsl(250 80% 55%))",
+                      icon: Fingerprint,
                       title: "Що потрібно?",
                       desc: "Лише номер телефону вашого Telegram. Код підтвердження надійде прямо в додаток.",
                     },
                     {
-                      icon: <Lock className="h-[15px] w-[15px] text-white" />,
-                      bg: "linear-gradient(135deg, hsl(168 70% 40%), hsl(220 75% 50%))",
+                      icon: Lock,
                       title: "Безпечно?",
                       desc: "Сесія зберігається на сервері. Ніхто, крім вас, не має доступу до акаунту.",
                     },
                     {
-                      icon: <Gem className="h-[15px] w-[15px] text-white" />,
-                      bg: "linear-gradient(135deg, hsl(316 85% 55%), hsl(271 80% 55%))",
+                      icon: Gem,
                       title: "Кому підходить?",
                       desc: "Telegram Business або Premium акаунт — для масових дій без обмежень.",
                     },
-                  ].map(({ icon, bg, title, desc }) => (
+                  ].map(({ icon: Icon, title, desc }) => (
                     <div key={title} className="flex items-start gap-3 px-3 py-2 rounded-2xl"
                       style={{ background: "rgba(255,255,255,0.04)" }}>
                       <div className="w-7 h-7 rounded-xl flex items-center justify-center shrink-0 mt-px"
-                        style={{ background: bg, boxShadow: "0 2px 8px rgba(0,0,0,0.30)" }}>
-                        {icon}
+                        style={{ background: "linear-gradient(135deg, hsl(271 91% 65% / 0.30), hsl(316 90% 62% / 0.20))" }}>
+                        <Icon style={{ color: "hsl(271 91% 80%)", width: 15, height: 15 }} />
                       </div>
                       <div>
                         <p className="font-display font-bold text-white text-[13px] leading-tight">{title}</p>

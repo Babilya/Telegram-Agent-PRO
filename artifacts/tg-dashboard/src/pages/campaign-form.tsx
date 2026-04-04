@@ -144,7 +144,7 @@ export default function CampaignForm() {
           <ArrowLeft className="h-4 w-4" />
         </Button>
         <div>
-          <h1 className="text-3xl font-bold font-mono tracking-tight">{isEdit ? "Edit Campaign" : "New Campaign"}</h1>
+          <h1 className="text-3xl font-display font-black tracking-tight text-gradient">{isEdit ? "Edit Campaign" : "New Campaign"}</h1>
           <p className="text-muted-foreground">Configure broadcast settings.</p>
         </div>
       </div>

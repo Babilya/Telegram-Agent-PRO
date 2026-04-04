@@ -125,7 +125,7 @@ export default function Search() {
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-3xl font-bold font-mono tracking-tight">Search Groups</h1>
+        <h1 className="text-3xl font-display font-black tracking-tight text-gradient">Search Groups</h1>
         <p className="text-muted-foreground">Find and acquire new Telegram targets.</p>
       </div>
 

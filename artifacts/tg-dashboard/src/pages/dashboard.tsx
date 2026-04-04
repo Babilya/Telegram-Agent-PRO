@@ -15,8 +15,8 @@ export function Dashboard() {
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-3xl font-bold font-mono tracking-tight">Overview</h1>
-        <p className="text-muted-foreground">System metrics and active jobs.</p>
+        <h1 className="text-3xl font-display font-black tracking-tight text-gradient">Overview</h1>
+        <p className="text-muted-foreground text-sm">System metrics and active jobs.</p>
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">

@@ -2,7 +2,7 @@ import { useState } from "react";
 import { useGetDashboardStats, getGetDashboardStatsQueryKey } from "@workspace/api-client-react";
 import { useGetAuthStatus, getGetAuthStatusQueryKey } from "@workspace/api-client-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Users, Megaphone, Send, AlertTriangle, Activity, ArrowRight, Search, Zap, CheckCircle2, LogIn } from "lucide-react";
+import { Users, Megaphone, Send, AlertTriangle, Activity, ArrowRight, Search, CheckCircle2, LogIn } from "lucide-react";
 import { Link } from "wouter";
 import { formatDistanceToNow } from "date-fns";
 import { uk } from "date-fns/locale";

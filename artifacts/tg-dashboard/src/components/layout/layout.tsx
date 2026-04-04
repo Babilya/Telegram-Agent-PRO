@@ -1,7 +1,7 @@
 import { ReactNode } from "react";
 import { BottomNav } from "./bottom-nav";
 import { useHealthCheck, getHealthCheckQueryKey } from "@workspace/api-client-react";
-import { Zap } from "lucide-react";
+import { TelegramIcon } from "@/components/ui/telegram-icon";
 import { Link } from "wouter";
 
 export function Layout({ children }: { children: ReactNode }) {
@@ -29,7 +29,7 @@ export function Layout({ children }: { children: ReactNode }) {
               boxShadow: "0 0 12px hsl(271 91% 65% / 0.45)",
               borderRadius: 8,
             }}>
-            <Zap className="h-3.5 w-3.5 text-white" />
+            <TelegramIcon className="h-3.5 w-3.5 text-white" />
           </div>
           <span className="font-display font-black text-base"
             style={{
@@ -37,7 +37,7 @@ export function Layout({ children }: { children: ReactNode }) {
               WebkitBackgroundClip: "text",
               WebkitTextFillColor: "transparent",
             }}>
-            TG_CTRL
+            GROUP AGENT
           </span>
         </Link>
 

@@ -1,9 +1,10 @@
 import { useState } from "react";
 import { useLocation } from "wouter";
 import {
-  Search, Users, Megaphone, Clock, Zap,
+  Search, Users, Megaphone, Clock,
   ShieldCheck, Smartphone, KeyRound, ArrowRight,
 } from "lucide-react";
+import { TelegramIcon } from "@/components/ui/telegram-icon";
 import { AuthModal } from "@/components/auth/auth-modal";
 
 const TOTAL_PAGES = 3;
@@ -138,9 +139,9 @@ export default function Landing() {
       <div className="relative z-20 shrink-0 px-5 pt-5 pb-2 max-w-lg mx-auto w-full">
         <div className="flex items-center gap-2">
           <div style={logoIcon}>
-            <Zap className="h-4 w-4 text-white" />
+            <TelegramIcon className="h-4 w-4 text-white" />
           </div>
-          <span className="font-display font-black text-lg" style={gradientText}>TG_CTRL</span>
+          <span className="font-display font-black text-lg" style={gradientText}>GROUP AGENT</span>
         </div>
       </div>
 

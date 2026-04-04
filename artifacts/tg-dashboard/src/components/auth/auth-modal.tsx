@@ -238,10 +238,11 @@ export function AuthModal({ onClose, onSuccess }: AuthModalProps) {
     setStep("phone");
   };
 
-  const isLoading = step === null || (step as any) === "__check";
+  if (step === null) return null;
+
   const progressSteps = step === "password" ? PROGRESS_STEPS_2FA : PROGRESS_STEPS;
-  const progressIndex = step ? progressSteps.indexOf(step as any) : -1;
-  const showProgress = ["phone", "code", "password", "success"].includes(step ?? "");
+  const progressIndex = progressSteps.indexOf(step as any);
+  const showProgress = ["phone", "code", "password", "success"].includes(step);
 
   return (
     <div
@@ -291,13 +292,6 @@ export function AuthModal({ onClose, onSuccess }: AuthModalProps) {
 
         {/* ── CONTENT ── */}
         <div className="px-4 pt-3 pb-5 flex flex-col gap-3">
-
-          {/* LOADING */}
-          {isLoading && (
-            <div className="flex items-center justify-center py-10">
-              <Loader2 className="h-6 w-6 animate-spin" style={{ color: PRI }} />
-            </div>
-          )}
 
           {/* ══ ПІДГОТОВКА ══ */}
           {step === "prep" && (

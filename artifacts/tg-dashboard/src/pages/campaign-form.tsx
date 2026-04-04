@@ -1,11 +1,11 @@
-import { useEffect, useMemo } from "react";
+import { useEffect } from "react";
 import { useLocation, useParams } from "wouter";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
-import { 
-  useCreateCampaign, 
-  useGetCampaign, 
+import {
+  useCreateCampaign,
+  useGetCampaign,
   getGetCampaignQueryKey,
   useUpdateCampaign,
   useListGroups,
@@ -25,22 +25,22 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { CreateCampaignBodyScheduleType } from "@workspace/api-zod/src/generated/types";
 
 const scheduleTypes = [
-  { value: "once", label: "Run once" },
-  { value: "hourly", label: "Every hour" },
-  { value: "every2h", label: "Every 2 hours" },
-  { value: "every4h", label: "Every 4 hours" },
-  { value: "every8h", label: "Every 8 hours" },
-  { value: "every12h", label: "Every 12 hours" },
-  { value: "daily", label: "Every day" },
-  { value: "custom", label: "Custom interval" },
+  { value: "once",     label: "Один раз" },
+  { value: "hourly",   label: "Щогодини" },
+  { value: "every2h",  label: "Кожні 2 год" },
+  { value: "every4h",  label: "Кожні 4 год" },
+  { value: "every8h",  label: "Кожні 8 год" },
+  { value: "every12h", label: "Кожні 12 год" },
+  { value: "daily",    label: "Щодня" },
+  { value: "custom",   label: "Довільний інтервал" },
 ] as const;
 
 const formSchema = z.object({
-  name: z.string().min(1, "Name is required"),
-  message: z.string().min(1, "Message is required"),
+  name: z.string().min(1, "Введіть назву кампанії"),
+  message: z.string().min(1, "Введіть текст повідомлення"),
   scheduleType: z.enum(["once", "hourly", "every2h", "every4h", "every8h", "every12h", "daily", "custom"]),
   intervalHours: z.string().optional(),
-  targetGroupIds: z.array(z.number()).min(1, "Select at least one target group"),
+  targetGroupIds: z.array(z.number()).min(1, "Оберіть хоча б одну групу"),
 });
 
 export default function CampaignForm() {
@@ -53,9 +53,7 @@ export default function CampaignForm() {
   const campaignId = isEdit ? parseInt(id) : undefined;
 
   const { data: groupsData, isLoading: isLoadingGroups } = useListGroups({ status: "joined" }, {
-    query: {
-      queryKey: getListGroupsQueryKey({ status: "joined" }),
-    }
+    query: { queryKey: getListGroupsQueryKey({ status: "joined" }) }
   });
 
   const { data: campaign, isLoading: isLoadingCampaign } = useGetCampaign(campaignId!, {
@@ -68,11 +66,7 @@ export default function CampaignForm() {
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
     defaultValues: {
-      name: "",
-      message: "",
-      scheduleType: "once",
-      intervalHours: "",
-      targetGroupIds: [],
+      name: "", message: "", scheduleType: "once", intervalHours: "", targetGroupIds: [],
     },
   });
 
@@ -96,36 +90,35 @@ export default function CampaignForm() {
       name: values.name,
       message: values.message,
       scheduleType: values.scheduleType as CreateCampaignBodyScheduleType,
-      intervalHours: values.scheduleType === "custom" && values.intervalHours ? parseInt(values.intervalHours) : undefined,
+      intervalHours: values.scheduleType === "custom" && values.intervalHours
+        ? parseInt(values.intervalHours)
+        : undefined,
       targetGroupIds: values.targetGroupIds,
     };
 
     if (isEdit) {
       updateCampaign.mutate({ data: { id: campaignId!, ...payload } }, {
         onSuccess: () => {
-          toast({ title: "Campaign Updated" });
+          toast({ title: "Кампанію оновлено" });
           queryClient.invalidateQueries({ queryKey: getGetCampaignQueryKey(campaignId!) });
           setLocation("/campaigns");
         },
-        onError: (err: any) => {
-          toast({ title: "Failed to update", description: err.message, variant: "destructive" });
-        }
+        onError: (err: any) => toast({ title: "Помилка оновлення", description: err.message, variant: "destructive" }),
       });
     } else {
       createCampaign.mutate({ data: payload }, {
         onSuccess: () => {
-          toast({ title: "Campaign Created" });
+          toast({ title: "Кампанію створено" });
           setLocation("/campaigns");
         },
-        onError: (err: any) => {
-          toast({ title: "Failed to create", description: err.message, variant: "destructive" });
-        }
+        onError: (err: any) => toast({ title: "Помилка створення", description: err.message, variant: "destructive" }),
       });
     }
   };
 
   const isSaving = createCampaign.isPending || updateCampaign.isPending;
   const isLoading = isLoadingGroups || (isEdit && isLoadingCampaign);
+  const selectedScheduleType = form.watch("scheduleType");
 
   if (isLoading) {
     return (
@@ -135,52 +128,48 @@ export default function CampaignForm() {
     );
   }
 
-  const selectedScheduleType = form.watch("scheduleType");
-
   return (
-    <div className="space-y-6 max-w-3xl">
-      <div className="flex items-center gap-4">
-        <Button variant="ghost" size="icon" onClick={() => setLocation("/campaigns")}>
+    <div className="space-y-4 pb-2">
+      <div className="flex items-center gap-3">
+        <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => setLocation("/campaigns")}>
           <ArrowLeft className="h-4 w-4" />
         </Button>
         <div>
-          <h1 className="text-3xl font-display font-black tracking-tight text-gradient">{isEdit ? "Edit Campaign" : "New Campaign"}</h1>
-          <p className="text-muted-foreground">Configure broadcast settings.</p>
+          <h1 className="text-2xl font-display font-black tracking-tight text-gradient">
+            {isEdit ? "Редагування кампанії" : "Нова кампанія"}
+          </h1>
+          <p className="text-muted-foreground text-sm">Налаштуйте параметри розсилки.</p>
         </div>
       </div>
 
       <Form {...form}>
-        <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
+        <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
           <Card className="border-border">
-            <CardHeader>
-              <CardTitle>Details</CardTitle>
+            <CardHeader className="pb-3 pt-4 px-4">
+              <CardTitle className="text-sm font-display">Основні параметри</CardTitle>
             </CardHeader>
-            <CardContent className="space-y-4">
-              <FormField
-                control={form.control}
-                name="name"
+            <CardContent className="px-4 pb-4 space-y-4">
+              <FormField control={form.control} name="name"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Campaign Name</FormLabel>
+                    <FormLabel className="text-xs">Назва кампанії</FormLabel>
                     <FormControl>
-                      <Input placeholder="e.g. Daily Promo - Morning" {...field} />
+                      <Input placeholder="Щоденна акція — Ранок" {...field} />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
                 )}
               />
 
-              <FormField
-                control={form.control}
-                name="message"
+              <FormField control={form.control} name="message"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Broadcast Message</FormLabel>
+                    <FormLabel className="text-xs">Текст повідомлення</FormLabel>
                     <FormControl>
-                      <Textarea 
-                        placeholder="Type the message to broadcast to groups..." 
-                        className="min-h-[150px] font-mono text-sm"
-                        {...field} 
+                      <Textarea
+                        placeholder="Введіть текст, який буде надсилатись у групи…"
+                        className="min-h-[120px] font-mono text-sm"
+                        {...field}
                       />
                     </FormControl>
                     <FormMessage />
@@ -188,17 +177,15 @@ export default function CampaignForm() {
                 )}
               />
 
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <FormField
-                  control={form.control}
-                  name="scheduleType"
+              <div className="grid grid-cols-2 gap-3">
+                <FormField control={form.control} name="scheduleType"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Schedule</FormLabel>
+                      <FormLabel className="text-xs">Розклад</FormLabel>
                       <Select onValueChange={field.onChange} value={field.value}>
                         <FormControl>
                           <SelectTrigger>
-                            <SelectValue placeholder="Select schedule" />
+                            <SelectValue placeholder="Оберіть…" />
                           </SelectTrigger>
                         </FormControl>
                         <SelectContent>
@@ -213,14 +200,12 @@ export default function CampaignForm() {
                 />
 
                 {selectedScheduleType === "custom" && (
-                  <FormField
-                    control={form.control}
-                    name="intervalHours"
+                  <FormField control={form.control} name="intervalHours"
                     render={({ field }) => (
                       <FormItem>
-                        <FormLabel>Interval (Hours)</FormLabel>
+                        <FormLabel className="text-xs">Інтервал (год)</FormLabel>
                         <FormControl>
-                          <Input type="number" min="1" placeholder="e.g. 48" {...field} />
+                          <Input type="number" min="1" placeholder="48" {...field} />
                         </FormControl>
                         <FormMessage />
                       </FormItem>
@@ -232,56 +217,42 @@ export default function CampaignForm() {
           </Card>
 
           <Card className="border-border">
-            <CardHeader>
-              <CardTitle>Targets</CardTitle>
-              <p className="text-sm text-muted-foreground">Select the joined groups to broadcast to.</p>
+            <CardHeader className="pb-2 pt-4 px-4">
+              <CardTitle className="text-sm font-display">Цільові групи</CardTitle>
+              <p className="text-xs text-muted-foreground">Оберіть групи, куди надсилати повідомлення.</p>
             </CardHeader>
-            <CardContent>
-              <FormField
-                control={form.control}
-                name="targetGroupIds"
+            <CardContent className="px-4 pb-4">
+              <FormField control={form.control} name="targetGroupIds"
                 render={() => (
                   <FormItem>
-                    <div className="max-h-64 overflow-y-auto border border-border rounded-md p-2 space-y-1">
+                    <div className="max-h-56 overflow-y-auto border border-border rounded-xl p-2 space-y-1">
                       {!groupsData?.groups?.length ? (
                         <div className="p-4 text-center text-muted-foreground text-sm">
-                          No joined groups available. Join groups first.
+                          Немає вступлених груп. Спочатку вступіть у групи.
                         </div>
                       ) : (
                         groupsData.groups.map(group => (
-                          <FormField
-                            key={group.id}
-                            control={form.control}
-                            name="targetGroupIds"
-                            render={({ field }) => {
-                              return (
-                                <FormItem
-                                  key={group.id}
-                                  className="flex flex-row items-start space-x-3 space-y-0 rounded-md p-2 hover:bg-secondary/50 cursor-pointer"
-                                >
-                                  <FormControl>
-                                    <Checkbox
-                                      checked={field.value?.includes(group.id)}
-                                      onCheckedChange={(checked) => {
-                                        return checked
-                                          ? field.onChange([...field.value, group.id])
-                                          : field.onChange(field.value?.filter((value) => value !== group.id));
-                                      }}
-                                    />
-                                  </FormControl>
-                                  <div className="space-y-1 leading-none">
-                                    <FormLabel className="cursor-pointer font-medium">
-                                      {group.title}
-                                    </FormLabel>
-                                    {group.username && (
-                                      <p className="text-xs text-muted-foreground font-mono">
-                                        @{group.username}
-                                      </p>
-                                    )}
-                                  </div>
-                                </FormItem>
-                              );
-                            }}
+                          <FormField key={group.id} control={form.control} name="targetGroupIds"
+                            render={({ field }) => (
+                              <FormItem className="flex flex-row items-center space-x-3 space-y-0 rounded-lg p-2 hover:bg-secondary/50 cursor-pointer">
+                                <FormControl>
+                                  <Checkbox
+                                    checked={field.value?.includes(group.id)}
+                                    onCheckedChange={(checked) => {
+                                      return checked
+                                        ? field.onChange([...field.value, group.id])
+                                        : field.onChange(field.value?.filter(v => v !== group.id));
+                                    }}
+                                  />
+                                </FormControl>
+                                <div className="leading-none">
+                                  <FormLabel className="cursor-pointer font-medium text-sm">{group.title}</FormLabel>
+                                  {group.username && (
+                                    <p className="text-xs text-muted-foreground font-mono">@{group.username}</p>
+                                  )}
+                                </div>
+                              </FormItem>
+                            )}
                           />
                         ))
                       )}
@@ -293,12 +264,12 @@ export default function CampaignForm() {
             </CardContent>
           </Card>
 
-          <div className="flex justify-end">
-            <Button type="submit" disabled={isSaving} size="lg" className="w-full sm:w-auto">
-              {isSaving ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Save className="mr-2 h-4 w-4" />}
-              {isEdit ? "Update Campaign" : "Create Campaign"}
-            </Button>
-          </div>
+          <Button type="submit" disabled={isSaving} className="w-full">
+            {isSaving
+              ? <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+              : <Save className="mr-2 h-4 w-4" />}
+            {isEdit ? "Зберегти зміни" : "Створити кампанію"}
+          </Button>
         </form>
       </Form>
     </div>

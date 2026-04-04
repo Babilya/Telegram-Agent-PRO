@@ -1,11 +1,10 @@
-import { ReactNode, useState } from "react";
-import { AppSidebar } from "./app-sidebar";
+import { ReactNode } from "react";
+import { BottomNav } from "./bottom-nav";
 import { useHealthCheck, getHealthCheckQueryKey } from "@workspace/api-client-react";
-import { Menu, X } from "lucide-react";
+import { Zap } from "lucide-react";
+import { Link } from "wouter";
 
 export function Layout({ children }: { children: ReactNode }) {
-  const [sidebarOpen, setSidebarOpen] = useState(false);
-
   const { data: health } = useHealthCheck({
     query: {
       queryKey: getHealthCheckQueryKey(),
@@ -14,69 +13,50 @@ export function Layout({ children }: { children: ReactNode }) {
   });
 
   return (
-    <div className="flex h-screen bg-background text-foreground overflow-hidden font-sans">
-      {/* Mobile overlay */}
-      {sidebarOpen && (
-        <div
-          className="fixed inset-0 z-30 bg-black/60 backdrop-blur-sm lg:hidden"
-          onClick={() => setSidebarOpen(false)}
-        />
-      )}
-
-      {/* Sidebar — always visible on lg, drawer on mobile */}
-      <div
-        className={`
-          fixed inset-y-0 left-0 z-40 w-64 transform transition-transform duration-300 ease-in-out
-          lg:static lg:translate-x-0 lg:z-auto
-          ${sidebarOpen ? "translate-x-0" : "-translate-x-full"}
-        `}
-      >
-        <AppSidebar onClose={() => setSidebarOpen(false)} />
-      </div>
-
-      {/* Main content */}
-      <div className="flex-1 flex flex-col overflow-hidden min-w-0">
-        {/* Header */}
-        <header className="h-14 border-b border-border bg-card/50 backdrop-blur flex items-center justify-between px-4 sm:px-6 shrink-0">
-          <div className="flex items-center gap-3">
-            {/* Hamburger - mobile only */}
-            <button
-              className="lg:hidden p-1.5 rounded-lg text-muted-foreground hover:text-foreground hover:bg-secondary transition-colors"
-              onClick={() => setSidebarOpen(true)}
-              data-testid="sidebar-toggle"
-            >
-              <Menu className="h-5 w-5" />
-            </button>
-            <div className="text-xs font-mono text-muted-foreground hidden sm:block">
-              {new Date().toISOString().split("T")[0]}
-            </div>
+    <div className="flex flex-col bg-background text-foreground font-sans"
+      style={{ height: "100dvh" }}>
+      {/* Top header */}
+      <header className="shrink-0 flex items-center justify-between px-4 h-12"
+        style={{
+          background: "hsl(258 40% 6% / 0.9)",
+          backdropFilter: "blur(12px)",
+          borderBottom: "1px solid hsl(258 30% 16%)",
+        }}>
+        <Link href="/dashboard" className="flex items-center gap-2">
+          <div className="w-7 h-7 rounded-lg flex items-center justify-center"
+            style={{
+              background: "linear-gradient(135deg, hsl(271 91% 65%), hsl(316 90% 62%))",
+              boxShadow: "0 0 12px hsl(271 91% 65% / 0.45)",
+              borderRadius: 8,
+            }}>
+            <Zap className="h-3.5 w-3.5 text-white" />
           </div>
+          <span className="font-display font-black text-base"
+            style={{
+              background: "linear-gradient(135deg, hsl(271 91% 72%), hsl(316 90% 68%))",
+              WebkitBackgroundClip: "text",
+              WebkitTextFillColor: "transparent",
+            }}>
+            TG_CTRL
+          </span>
+        </Link>
 
-          <div className="flex items-center gap-2">
-            <div className="flex items-center gap-2 text-xs font-mono">
-              <span className="text-muted-foreground hidden sm:inline">SYS_STATUS:</span>
-              {health?.status === "ok" ? (
-                <span className="text-primary flex items-center gap-1">
-                  <div className="h-1.5 w-1.5 rounded-full bg-primary animate-pulse" />
-                  <span className="hidden sm:inline">ONLINE</span>
-                </span>
-              ) : (
-                <span className="text-destructive flex items-center gap-1">
-                  <div className="h-1.5 w-1.5 rounded-full bg-destructive" />
-                  <span className="hidden sm:inline">OFFLINE</span>
-                </span>
-              )}
-            </div>
-          </div>
-        </header>
+        <div className="flex items-center gap-1.5 text-xs font-mono">
+          <div className={`h-1.5 w-1.5 rounded-full ${health?.status === "ok" ? "bg-primary animate-pulse" : "bg-destructive"}`} />
+          <span style={{ color: health?.status === "ok" ? "hsl(271 91% 65%)" : "hsl(0 85% 60%)" }}>
+            {health?.status === "ok" ? "ONLINE" : "OFFLINE"}
+          </span>
+        </div>
+      </header>
 
-        {/* Page content */}
-        <main className="flex-1 overflow-auto p-4 sm:p-6 lg:p-8">
-          <div className="max-w-6xl mx-auto">
-            {children}
-          </div>
-        </main>
-      </div>
+      {/* Page content — padded at bottom for nav bar */}
+      <main className="flex-1 overflow-auto px-4 pt-4 pb-4" style={{ paddingBottom: "calc(60px + env(safe-area-inset-bottom, 0px) + 16px)" }}>
+        <div className="max-w-2xl mx-auto">
+          {children}
+        </div>
+      </main>
+
+      <BottomNav />
     </div>
   );
 }

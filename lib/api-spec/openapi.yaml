@@ -1,22 +1,32 @@
 openapi: 3.1.0
 info:
-  # Do not change the title, if the title changes, the import paths will be broken
   title: Api
   version: 0.1.0
-  description: API specification
+  description: Telegram Group Manager API
 servers:
   - url: /api
     description: Base API path
 tags:
   - name: health
     description: Health operations
+  - name: auth
+    description: Telegram authentication
+  - name: search
+    description: Group search operations
+  - name: groups
+    description: Saved groups management
+  - name: campaigns
+    description: Broadcast campaigns
+  - name: jobs
+    description: Join/broadcast job queue
+  - name: stats
+    description: Statistics and dashboard
 paths:
   /healthz:
     get:
       operationId: healthCheck
       tags: [health]
       summary: Health check
-      description: Returns server health status
       responses:
         "200":
           description: Healthy
@@ -24,6 +34,366 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/HealthStatus"
+
+  /auth/status:
+    get:
+      operationId: getAuthStatus
+      tags: [auth]
+      summary: Get Telegram auth status
+      responses:
+        "200":
+          description: Auth status
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AuthStatus"
+
+  /auth/send-code:
+    post:
+      operationId: sendAuthCode
+      tags: [auth]
+      summary: Send Telegram auth code
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/SendCodeBody"
+      responses:
+        "200":
+          description: Code sent
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AuthResult"
+
+  /auth/verify-code:
+    post:
+      operationId: verifyAuthCode
+      tags: [auth]
+      summary: Verify auth code
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/VerifyCodeBody"
+      responses:
+        "200":
+          description: Verified
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AuthResult"
+
+  /auth/verify-password:
+    post:
+      operationId: verifyAuthPassword
+      tags: [auth]
+      summary: Verify 2FA password
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/VerifyPasswordBody"
+      responses:
+        "200":
+          description: Verified
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AuthResult"
+
+  /auth/logout:
+    post:
+      operationId: logoutAuth
+      tags: [auth]
+      summary: Logout from Telegram
+      responses:
+        "200":
+          description: Logged out
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AuthResult"
+
+  /search/groups:
+    get:
+      operationId: searchGroups
+      tags: [search]
+      summary: Search Telegram groups
+      parameters:
+        - name: query
+          in: query
+          required: false
+          schema:
+            type: string
+        - name: minMembers
+          in: query
+          required: false
+          schema:
+            type: integer
+        - name: maxMembers
+          in: query
+          required: false
+          schema:
+            type: integer
+        - name: limit
+          in: query
+          required: false
+          schema:
+            type: integer
+            default: 20
+        - name: groupType
+          in: query
+          required: false
+          schema:
+            type: string
+            enum: [all, group, channel, supergroup]
+      responses:
+        "200":
+          description: Search results
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/GroupSearchResults"
+
+  /groups:
+    get:
+      operationId: listGroups
+      tags: [groups]
+      summary: List saved groups
+      parameters:
+        - name: status
+          in: query
+          required: false
+          schema:
+            type: string
+            enum: [all, saved, joined, pending]
+      responses:
+        "200":
+          description: List of groups
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/GroupList"
+    post:
+      operationId: saveGroup
+      tags: [groups]
+      summary: Save a group
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/SaveGroupBody"
+      responses:
+        "201":
+          description: Group saved
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Group"
+
+  /groups/{id}:
+    delete:
+      operationId: deleteGroup
+      tags: [groups]
+      summary: Delete a saved group
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Deleted
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DeleteResult"
+
+  /groups/join:
+    post:
+      operationId: joinGroups
+      tags: [groups]
+      summary: Auto-join selected groups
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/JoinGroupsBody"
+      responses:
+        "200":
+          description: Join job started
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/JobResult"
+
+  /campaigns:
+    get:
+      operationId: listCampaigns
+      tags: [campaigns]
+      summary: List broadcast campaigns
+      responses:
+        "200":
+          description: Campaign list
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CampaignList"
+    post:
+      operationId: createCampaign
+      tags: [campaigns]
+      summary: Create a campaign
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateCampaignBody"
+      responses:
+        "201":
+          description: Campaign created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Campaign"
+
+  /campaigns/{id}:
+    get:
+      operationId: getCampaign
+      tags: [campaigns]
+      summary: Get campaign details
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Campaign
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Campaign"
+    put:
+      operationId: updateCampaign
+      tags: [campaigns]
+      summary: Update campaign
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdateCampaignBody"
+      responses:
+        "200":
+          description: Updated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Campaign"
+    delete:
+      operationId: deleteCampaign
+      tags: [campaigns]
+      summary: Delete campaign
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Deleted
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DeleteResult"
+
+  /campaigns/{id}/start:
+    post:
+      operationId: startCampaign
+      tags: [campaigns]
+      summary: Start/activate a campaign
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Campaign started
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/JobResult"
+
+  /campaigns/{id}/pause:
+    post:
+      operationId: pauseCampaign
+      tags: [campaigns]
+      summary: Pause campaign
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Paused
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/JobResult"
+
+  /jobs:
+    get:
+      operationId: listJobs
+      tags: [jobs]
+      summary: List recent jobs
+      parameters:
+        - name: limit
+          in: query
+          required: false
+          schema:
+            type: integer
+            default: 50
+      responses:
+        "200":
+          description: Job list
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/JobList"
+
+  /stats/dashboard:
+    get:
+      operationId: getDashboardStats
+      tags: [stats]
+      summary: Get dashboard statistics
+      responses:
+        "200":
+          description: Dashboard stats
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DashboardStats"
+
 components:
   schemas:
     HealthStatus:
@@ -31,6 +401,334 @@ components:
       properties:
         status:
           type: string
-      required:
-        - status
+      required: [status]
 
+    AuthStatus:
+      type: object
+      properties:
+        authenticated:
+          type: boolean
+        phone:
+          type: string
+          nullable: true
+        username:
+          type: string
+          nullable: true
+        firstName:
+          type: string
+          nullable: true
+      required: [authenticated]
+
+    AuthResult:
+      type: object
+      properties:
+        success:
+          type: boolean
+        message:
+          type: string
+        requiresPassword:
+          type: boolean
+          nullable: true
+        authenticated:
+          type: boolean
+          nullable: true
+      required: [success, message]
+
+    SendCodeBody:
+      type: object
+      properties:
+        phone:
+          type: string
+      required: [phone]
+
+    VerifyCodeBody:
+      type: object
+      properties:
+        phone:
+          type: string
+        code:
+          type: string
+        phoneCodeHash:
+          type: string
+      required: [phone, code, phoneCodeHash]
+
+    VerifyPasswordBody:
+      type: object
+      properties:
+        password:
+          type: string
+      required: [password]
+
+    TelegramGroup:
+      type: object
+      properties:
+        id:
+          type: string
+        title:
+          type: string
+        username:
+          type: string
+          nullable: true
+        membersCount:
+          type: integer
+          nullable: true
+        description:
+          type: string
+          nullable: true
+        type:
+          type: string
+          enum: [group, channel, supergroup]
+        isPublic:
+          type: boolean
+        inviteLink:
+          type: string
+          nullable: true
+      required: [id, title, type, isPublic]
+
+    GroupSearchResults:
+      type: object
+      properties:
+        results:
+          type: array
+          items:
+            $ref: "#/components/schemas/TelegramGroup"
+        total:
+          type: integer
+      required: [results, total]
+
+    Group:
+      type: object
+      properties:
+        id:
+          type: integer
+        telegramId:
+          type: string
+        title:
+          type: string
+        username:
+          type: string
+          nullable: true
+        membersCount:
+          type: integer
+          nullable: true
+        type:
+          type: string
+        status:
+          type: string
+          enum: [saved, joined, pending, failed]
+        createdAt:
+          type: string
+      required: [id, telegramId, title, type, status, createdAt]
+
+    GroupList:
+      type: object
+      properties:
+        groups:
+          type: array
+          items:
+            $ref: "#/components/schemas/Group"
+        total:
+          type: integer
+      required: [groups, total]
+
+    SaveGroupBody:
+      type: object
+      properties:
+        telegramId:
+          type: string
+        title:
+          type: string
+        username:
+          type: string
+          nullable: true
+        membersCount:
+          type: integer
+          nullable: true
+        type:
+          type: string
+      required: [telegramId, title, type]
+
+    JoinGroupsBody:
+      type: object
+      properties:
+        groupIds:
+          type: array
+          items:
+            type: integer
+        delaySeconds:
+          type: integer
+          default: 5
+      required: [groupIds]
+
+    Campaign:
+      type: object
+      properties:
+        id:
+          type: integer
+        name:
+          type: string
+        message:
+          type: string
+        status:
+          type: string
+          enum: [draft, active, paused, completed]
+        scheduleType:
+          type: string
+          enum: [once, hourly, every2h, every4h, every8h, every12h, daily, custom]
+        intervalHours:
+          type: number
+          nullable: true
+        targetGroupIds:
+          type: array
+          items:
+            type: integer
+        sentCount:
+          type: integer
+        failCount:
+          type: integer
+        lastRunAt:
+          type: string
+          nullable: true
+        nextRunAt:
+          type: string
+          nullable: true
+        createdAt:
+          type: string
+      required: [id, name, message, status, scheduleType, targetGroupIds, sentCount, failCount, createdAt]
+
+    CampaignList:
+      type: object
+      properties:
+        campaigns:
+          type: array
+          items:
+            $ref: "#/components/schemas/Campaign"
+        total:
+          type: integer
+      required: [campaigns, total]
+
+    CreateCampaignBody:
+      type: object
+      properties:
+        name:
+          type: string
+        message:
+          type: string
+        scheduleType:
+          type: string
+          enum: [once, hourly, every2h, every4h, every8h, every12h, daily, custom]
+        intervalHours:
+          type: number
+          nullable: true
+        targetGroupIds:
+          type: array
+          items:
+            type: integer
+      required: [name, message, scheduleType, targetGroupIds]
+
+    UpdateCampaignBody:
+      type: object
+      properties:
+        name:
+          type: string
+        message:
+          type: string
+        scheduleType:
+          type: string
+        intervalHours:
+          type: number
+          nullable: true
+        targetGroupIds:
+          type: array
+          items:
+            type: integer
+        status:
+          type: string
+
+    Job:
+      type: object
+      properties:
+        id:
+          type: integer
+        type:
+          type: string
+          enum: [join, broadcast]
+        status:
+          type: string
+          enum: [pending, running, completed, failed]
+        targetId:
+          type: string
+          nullable: true
+        campaignId:
+          type: integer
+          nullable: true
+        groupId:
+          type: integer
+          nullable: true
+        message:
+          type: string
+          nullable: true
+        error:
+          type: string
+          nullable: true
+        createdAt:
+          type: string
+        completedAt:
+          type: string
+          nullable: true
+      required: [id, type, status, createdAt]
+
+    JobList:
+      type: object
+      properties:
+        jobs:
+          type: array
+          items:
+            $ref: "#/components/schemas/Job"
+        total:
+          type: integer
+      required: [jobs, total]
+
+    JobResult:
+      type: object
+      properties:
+        success:
+          type: boolean
+        message:
+          type: string
+        jobIds:
+          type: array
+          items:
+            type: integer
+          nullable: true
+      required: [success, message]
+
+    DeleteResult:
+      type: object
+      properties:
+        success:
+          type: boolean
+        message:
+          type: string
+      required: [success, message]
+
+    DashboardStats:
+      type: object
+      properties:
+        totalGroups:
+          type: integer
+        joinedGroups:
+          type: integer
+        activeCampaigns:
+          type: integer
+        totalSent:
+          type: integer
+        totalFailed:
+          type: integer
+        recentJobs:
+          type: array
+          items:
+            $ref: "#/components/schemas/Job"
+        authStatus:
+          $ref: "#/components/schemas/AuthStatus"
+      required: [totalGroups, joinedGroups, activeCampaigns, totalSent, totalFailed, recentJobs, authStatus]

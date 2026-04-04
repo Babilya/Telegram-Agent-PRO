@@ -1,0 +1,8 @@
+telethon==1.36.0
+python-telegram-bot==21.9
+fastapi==0.115.6
+uvicorn==0.32.1
+httpx==0.28.1
+apscheduler==3.10.4
+aiofiles==24.1.0
+python-dotenv==1.0.1

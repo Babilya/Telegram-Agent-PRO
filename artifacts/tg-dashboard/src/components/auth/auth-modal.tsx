@@ -1,8 +1,8 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
-import { Loader2, X, Smartphone, KeyRound, ShieldCheck, ArrowRight, CheckCircle2, LogOut, Bot, Fingerprint, Lock, Gem } from "lucide-react";
+import { Loader2, X, Smartphone, KeyRound, ShieldCheck, ArrowRight, CheckCircle2, Settings, Bot, Fingerprint, Lock, Gem, ExternalLink } from "lucide-react";
 import { TelegramIcon } from "@/components/ui/telegram-icon";
 import { useQueryClient } from "@tanstack/react-query";
 import {
@@ -20,7 +20,7 @@ interface AuthModalProps {
   onSuccess: () => void;
 }
 
-type Step = "intro" | "phone" | "code" | "password" | "success";
+type Step = "apiid" | "intro" | "phone" | "code" | "password" | "success";
 
 const convexBtn: React.CSSProperties = {
   background: "linear-gradient(160deg, hsl(271 91% 68%), hsl(316 90% 60%))",
@@ -32,23 +32,9 @@ const convexBtn: React.CSSProperties = {
     "inset 0 -1px 0 rgba(0,0,0,0.18)",
 };
 
-const glassPanel: React.CSSProperties = {
-  background: "rgba(255,255,255,0.04)",
-  border: "1px solid rgba(255,255,255,0.08)",
-  backdropFilter: "blur(16px)",
-  WebkitBackdropFilter: "blur(16px)",
-};
-
-const gradientText: React.CSSProperties = {
-  background: "linear-gradient(135deg, hsl(271 91% 72%), hsl(316 90% 68%))",
-  WebkitBackgroundClip: "text",
-  WebkitTextFillColor: "transparent",
-};
-
-const steps: Step[] = ["intro", "phone", "code", "success"];
-
 const stepInfo: Record<Step, { icon: React.FC<any>; label: string }> = {
-  intro:    { icon: TelegramIcon,  label: "Про підключення" },
+  apiid:    { icon: Settings,     label: "API налаштування" },
+  intro:    { icon: TelegramIcon, label: "Про підключення" },
   phone:    { icon: Smartphone,   label: "Номер телефону" },
   code:     { icon: KeyRound,     label: "Код підтвердження" },
   password: { icon: ShieldCheck,  label: "Пароль 2FA" },
@@ -58,8 +44,19 @@ const stepInfo: Record<Step, { icon: React.FC<any>; label: string }> = {
 export function AuthModal({ onClose, onSuccess }: AuthModalProps) {
   const { toast } = useToast();
   const queryClient = useQueryClient();
-  const [step, setStep] = useState<Step>("intro");
+  const [step, setStep] = useState<Step>("apiid");
   const [phoneNumber, setPhoneNumber] = useState("");
+  const [codeDisplay, setCodeDisplay] = useState("");
+  const [apiIdInput, setApiIdInput] = useState("");
+
+  useEffect(() => {
+    fetch("/api/auth/config")
+      .then(r => r.json())
+      .then((cfg: { hasCredentials: boolean }) => {
+        if (cfg.hasCredentials) setStep("intro");
+      })
+      .catch(() => {});
+  }, []);
 
   const { data: authStatus } = useGetAuthStatus({ query: { queryKey: getGetAuthStatusQueryKey() } });
   const sendCode = useSendAuthCode();
@@ -136,9 +133,9 @@ export function AuthModal({ onClose, onSuccess }: AuthModalProps) {
     });
   };
 
-  const visibleSteps = step === "password"
-    ? (["intro", "phone", "code", "password", "success"] as Step[])
-    : (["intro", "phone", "code", "success"] as Step[]);
+  const visibleSteps = (step === "password"
+    ? ["phone", "code", "password", "success"]
+    : ["phone", "code", "success"]) as Step[];
 
   const stepIndex = visibleSteps.indexOf(step);
 
@@ -197,6 +194,73 @@ export function AuthModal({ onClose, onSuccess }: AuthModalProps) {
 
         {/* Content */}
         <div className="px-4 pt-2 pb-5">
+
+          {/* ── API ID ── */}
+          {step === "apiid" && (
+            <div className="flex flex-col gap-3">
+              <div className="flex items-center gap-2 px-3 py-2 rounded-2xl"
+                style={{ background: "rgba(255,255,255,0.04)" }}>
+                <div className="w-7 h-7 rounded-xl flex items-center justify-center shrink-0"
+                  style={{ background: "linear-gradient(135deg, hsl(271 91% 65% / 0.30), hsl(316 90% 62% / 0.20))" }}>
+                  <Settings style={{ color: "hsl(271 91% 80%)", width: 14, height: 14 }} />
+                </div>
+                <div>
+                  <p className="font-display font-bold text-white text-[13px] leading-tight">Налаштування API</p>
+                  <p className="text-[11px] mt-0.5" style={{ color: subColor }}>Потрібно один раз</p>
+                </div>
+              </div>
+
+              <div className="flex flex-col gap-2 px-1">
+                <p className="text-[13px] leading-relaxed" style={{ color: subColor }}>
+                  Перейди на{" "}
+                  <a href="https://my.telegram.org" target="_blank" rel="noopener noreferrer"
+                    className="inline-flex items-center gap-0.5 font-semibold"
+                    style={{ color: "hsl(271 91% 75%)" }}>
+                    my.telegram.org <ExternalLink className="h-3 w-3" />
+                  </a>
+                  {" "}→ <span className="text-white font-semibold">API Development Tools</span>
+                </p>
+                <p className="text-[13px] leading-relaxed" style={{ color: subColor }}>
+                  Скопіюй <span className="text-white font-semibold">App api_id</span> (число) та введи нижче.
+                </p>
+              </div>
+
+              <div className="flex flex-col gap-1.5">
+                <label className="text-[11px] font-display font-semibold uppercase tracking-[0.10em]"
+                  style={{ color: "hsl(258 15% 62%)" }}>
+                  API ID (число)
+                </label>
+                <input
+                  type="tel"
+                  placeholder="12345678"
+                  value={apiIdInput}
+                  onChange={(e) => setApiIdInput(e.target.value.replace(/\D/g, ""))}
+                  className={inputCls}
+                  style={inputStyle}
+                  onFocus={inputFocus} onBlur={inputBlur}
+                />
+              </div>
+
+              <button
+                onClick={() => {
+                  if (apiIdInput.length < 5) {
+                    toast({ title: "Введіть API ID", description: "Мінімум 5 цифр", variant: "destructive" });
+                    return;
+                  }
+                  setStep("intro");
+                }}
+                className="w-full py-3.5 rounded-2xl font-display font-bold text-sm flex items-center justify-center gap-2"
+                style={convexBtn}>
+                <ArrowRight className="h-4 w-4" /> Продовжити
+              </button>
+
+              <button onClick={() => setStep("intro")}
+                className="text-center text-xs py-1.5"
+                style={{ color: "hsl(258 15% 55%)" }}>
+                Вже налаштовано — пропустити
+              </button>
+            </div>
+          )}
 
           {/* ── INTRO ── */}
           {step === "intro" && (
@@ -321,11 +385,19 @@ export function AuthModal({ onClose, onSuccess }: AuthModalProps) {
                     style={{ color: "hsl(258 15% 62%)" }}>
                     Код з Telegram
                   </label>
-                  <input {...codeForm.register("code")}
-                    placeholder="12345"
-                    maxLength={6}
-                    className={`${inputCls} font-mono text-lg text-center tracking-[0.5em]`}
-                    style={inputStyle}
+                  <input
+                    ref={codeForm.register("code").ref}
+                    type="tel"
+                    inputMode="numeric"
+                    placeholder="1 2 3 4 5"
+                    value={codeDisplay}
+                    onChange={(e) => {
+                      const raw = e.target.value.replace(/\s+/g, "").replace(/\D/g, "").slice(0, 5);
+                      setCodeDisplay(raw.split("").join(" "));
+                      codeForm.setValue("code", raw, { shouldValidate: true });
+                    }}
+                    className={`${inputCls} font-mono text-xl text-center`}
+                    style={{ ...inputStyle, letterSpacing: "0.45em" }}
                     onFocus={inputFocus} onBlur={inputBlur}
                   />
                   {codeForm.formState.errors.code && (

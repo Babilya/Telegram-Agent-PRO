@@ -66,4 +66,13 @@ router.post("/auth/logout", async (req, res) => {
   }
 });
 
+router.get("/auth/config", async (req, res) => {
+  try {
+    const data = await proxyToPython("/auth/config");
+    res.json(data);
+  } catch {
+    res.json({ hasCredentials: false });
+  }
+});
+
 export default router;

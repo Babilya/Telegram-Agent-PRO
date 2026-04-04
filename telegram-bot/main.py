@@ -171,6 +171,13 @@ async def logout():
         return {"success": False, "message": str(e)}
 
 
+@app.get("/auth/config")
+async def get_auth_config():
+    api_id = os.environ.get("TELEGRAM_API_ID")
+    api_hash = os.environ.get("TELEGRAM_API_HASH")
+    return {"hasCredentials": bool(api_id and api_hash)}
+
+
 # ─── Search ─────────────────────────────────────────────────────────────────────
 
 @app.get("/search/groups")

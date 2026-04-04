@@ -2,7 +2,8 @@ import { useState } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
-import { Loader2, X, Smartphone, KeyRound, ShieldCheck, Zap, ArrowRight, CheckCircle2, LogOut } from "lucide-react";
+import { Loader2, X, Smartphone, KeyRound, ShieldCheck, ArrowRight, CheckCircle2, LogOut } from "lucide-react";
+import { TelegramIcon } from "@/components/ui/telegram-icon";
 import { useQueryClient } from "@tanstack/react-query";
 import {
   useSendAuthCode,
@@ -47,7 +48,7 @@ const gradientText: React.CSSProperties = {
 const steps: Step[] = ["intro", "phone", "code", "success"];
 
 const stepInfo: Record<Step, { icon: React.FC<any>; label: string }> = {
-  intro:    { icon: Zap,          label: "Про підключення" },
+  intro:    { icon: TelegramIcon,  label: "Про підключення" },
   phone:    { icon: Smartphone,   label: "Номер телефону" },
   code:     { icon: KeyRound,     label: "Код підтвердження" },
   password: { icon: ShieldCheck,  label: "Пароль 2FA" },
@@ -226,7 +227,7 @@ export function AuthModal({ onClose, onSuccess }: AuthModalProps) {
                 <div className="flex flex-col gap-4">
                   <div className="flex flex-col gap-3">
                     {[
-                      { emoji: "🔐", title: "Що це?", desc: "TG_CTRL використовує ваш Telegram акаунт для пошуку груп, автовступу та розсилок — без сторонніх сервісів." },
+                      { emoji: "🔐", title: "Що це?", desc: "GROUP AGENT використовує ваш Telegram акаунт для пошуку груп, автовступу та розсилок — без сторонніх сервісів." },
                       { emoji: "📱", title: "Що потрібно?", desc: "Лише номер телефону вашого Telegram. Код підтвердження надійде прямо в додаток." },
                       { emoji: "🛡️", title: "Безпечно?", desc: "Сесія зберігається на сервері. Ніхто, крім вас, не має доступу до акаунту." },
                       { emoji: "⚡", title: "Кому підходить?", desc: "Telegram Business або Premium акаунт — для масових дій без обмежень." },
@@ -403,7 +404,7 @@ export function AuthModal({ onClose, onSuccess }: AuthModalProps) {
               <button onClick={onSuccess}
                 className="w-full py-3.5 rounded-2xl font-display font-bold text-sm flex items-center justify-center gap-2"
                 style={convexBtn}>
-                <Zap className="h-4 w-4" /> Відкрити панель
+                <TelegramIcon className="h-4 w-4" /> Відкрити панель
               </button>
             </div>
           )}

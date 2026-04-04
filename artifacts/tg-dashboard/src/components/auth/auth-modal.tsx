@@ -252,7 +252,7 @@ export function AuthModal({ onClose, onSuccess }: AuthModalProps) {
                       desc: "Telegram Business або Premium акаунт — для масових дій без обмежень.",
                     },
                   ].map(({ icon: Icon, title, desc }) => (
-                    <div key={title} className="flex items-start gap-3 px-3 py-2 rounded-2xl"
+                    <div key={title} className="flex items-start gap-2 px-3 py-2 rounded-2xl"
                       style={{ background: "rgba(255,255,255,0.04)" }}>
                       <div className="w-7 h-7 rounded-xl flex items-center justify-center shrink-0 mt-px"
                         style={{ background: "linear-gradient(135deg, hsl(271 91% 65% / 0.30), hsl(316 90% 62% / 0.20))" }}>

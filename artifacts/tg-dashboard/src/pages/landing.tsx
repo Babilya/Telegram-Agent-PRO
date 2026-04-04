@@ -148,6 +148,11 @@ export default function Landing() {
         </div>
       </div>
 
+      {/* ── Divider ── */}
+      <div className="relative z-10 shrink-0 px-5 max-w-lg mx-auto w-full">
+        <div style={{ height: 1, background: "linear-gradient(90deg, transparent, hsl(271 91% 65% / 0.35), hsl(316 90% 62% / 0.35), transparent)" }} />
+      </div>
+
       {/* ── TEXT: Badge + heading + desc ── */}
       <div className="relative z-10 shrink-0 px-5 pt-3 pb-2 max-w-lg mx-auto w-full">
         <div className="flex flex-col gap-1">

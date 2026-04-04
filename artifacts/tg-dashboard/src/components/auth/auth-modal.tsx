@@ -198,14 +198,14 @@ export function AuthModal({ onClose, onSuccess }: AuthModalProps) {
       return;
     }
     verifyCode.mutate({ data: { phone, code: codeRaw, phoneCodeHash } }, {
-      onSuccess: (res) => {
-        if (res.success) {
+      onSuccess: (res: any) => {
+        if (res.requiresPassword || res.requires2FA) {
+          setStep("password");
+        } else if (res.success) {
           queryClient.invalidateQueries({ queryKey: getGetAuthStatusQueryKey() });
           setStep("success");
-        } else if (res.requires2FA) {
-          setStep("password");
         } else {
-          toast({ title: "Невірний код", description: res.error ?? "Спробуйте ще раз або запитайте новий", variant: "destructive" });
+          toast({ title: "Невірний код", description: res.error ?? res.message ?? "Спробуйте ще раз або запитайте новий", variant: "destructive" });
         }
       },
       onError: () => toast({ title: "Помилка з'єднання", description: "Перевірте сервер", variant: "destructive" }),

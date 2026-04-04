@@ -142,7 +142,7 @@ async def verify_code(req: VerifyCodeRequest):
         await client.sign_in(phone=req.phone, code=req.code, phone_code_hash=req.phoneCodeHash)
         return {"success": True, "message": "Authenticated", "authenticated": True}
     except SessionPasswordNeededError:
-        return {"success": True, "message": "2FA required", "requiresPassword": True}
+        return {"success": True, "message": "2FA required", "requiresPassword": True, "requires2FA": True}
     except Exception as e:
         logger.error(f"Verify code error: {e}")
         return {"success": False, "message": str(e)}

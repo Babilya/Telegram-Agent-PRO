@@ -2,7 +2,7 @@ import { useState, useEffect } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
-import { Loader2, X, Smartphone, KeyRound, ShieldCheck, ArrowRight, CheckCircle2, Settings, Bot, Fingerprint, Lock, Gem, ExternalLink } from "lucide-react";
+import { Loader2, X, Smartphone, KeyRound, ShieldCheck, ArrowRight, CheckCircle2, Settings, Bot, Lock, ExternalLink } from "lucide-react";
 import { TelegramIcon } from "@/components/ui/telegram-icon";
 import { useQueryClient } from "@tanstack/react-query";
 import {
@@ -20,7 +20,7 @@ interface AuthModalProps {
   onSuccess: () => void;
 }
 
-type Step = "apiid" | "intro" | "phone" | "code" | "password" | "success";
+type Step = "prep" | "apiid" | "apihash" | "intro" | "phone" | "code" | "password" | "success";
 
 const convexBtn: React.CSSProperties = {
   background: "linear-gradient(160deg, hsl(271 91% 68%), hsl(316 90% 60%))",
@@ -33,7 +33,9 @@ const convexBtn: React.CSSProperties = {
 };
 
 const stepInfo: Record<Step, { icon: React.FC<any>; label: string }> = {
-  apiid:    { icon: Settings,     label: "API налаштування" },
+  prep:     { icon: Bot,          label: "Підготовка" },
+  apiid:    { icon: Settings,     label: "Крок 1: API ID" },
+  apihash:  { icon: KeyRound,     label: "Крок 2: API Hash" },
   intro:    { icon: TelegramIcon, label: "Про підключення" },
   phone:    { icon: Smartphone,   label: "Номер телефону" },
   code:     { icon: KeyRound,     label: "Код підтвердження" },
@@ -49,17 +51,25 @@ export function AuthModal({ onClose, onSuccess }: AuthModalProps) {
   const [phoneCodeHash, setPhoneCodeHash] = useState("");
   const [codeDisplay, setCodeDisplay] = useState("");
   const [apiIdInput, setApiIdInput] = useState("");
+  const [apiHashInput, setApiHashInput] = useState("");
 
   useEffect(() => {
     fetch("/api/auth/config")
       .then(r => r.json())
       .then((cfg: { hasCredentials: boolean }) => {
-        setStep(cfg.hasCredentials ? "intro" : "apiid");
+        setStep(cfg.hasCredentials ? "intro" : "prep");
       })
-      .catch(() => setStep("intro"));
+      .catch(() => setStep("prep"));
   }, []);
 
   const { data: authStatus } = useGetAuthStatus({ query: { queryKey: getGetAuthStatusQueryKey() } });
+
+  useEffect(() => {
+    if (step === "intro" && authStatus !== undefined && !authStatus.authenticated) {
+      setStep("phone");
+    }
+  }, [step, authStatus]);
+
   const sendCode = useSendAuthCode();
   const verifyCode = useVerifyAuthCode();
   const verifyPassword = useVerifyAuthPassword();
@@ -204,44 +214,78 @@ export function AuthModal({ onClose, onSuccess }: AuthModalProps) {
             </div>
           )}
 
+          {/* ── PREP (ПІДГОТОВКА) ── */}
+          {step === "prep" && (
+            <div className="flex flex-col gap-3">
+              <div className="flex flex-col gap-2">
+                {[
+                  { icon: Settings,   label: "API ID та API Hash",  sub: "Отримати на my.telegram.org" },
+                  { icon: Smartphone, label: "Номер телефону акаунта", sub: "Міжнародний формат: +380…" },
+                  { icon: KeyRound,   label: "Код з Telegram",      sub: "5-значний, надійде в додаток" },
+                  { icon: ShieldCheck,label: "2FA пароль",          sub: "Якщо увімкнено в налаштуваннях" },
+                ].map(({ icon: Icon, label, sub }) => (
+                  <div key={label} className="flex items-center gap-3 px-3 py-2 rounded-2xl"
+                    style={{ background: "rgba(255,255,255,0.04)" }}>
+                    <div className="w-7 h-7 rounded-xl flex items-center justify-center shrink-0"
+                      style={{ background: "linear-gradient(135deg, hsl(271 91% 65% / 0.30), hsl(316 90% 62% / 0.20))" }}>
+                      <Icon style={{ color: "hsl(271 91% 80%)", width: 14, height: 14 }} />
+                    </div>
+                    <div>
+                      <p className="text-[13px] font-display font-bold text-white leading-tight">{label}</p>
+                      <p className="text-[11px] mt-0.5" style={{ color: subColor }}>{sub}</p>
+                    </div>
+                  </div>
+                ))}
+              </div>
+
+              <div className="flex items-start gap-2 px-3 py-2 rounded-xl"
+                style={{ background: "hsl(271 91% 65% / 0.08)", border: "1px solid hsl(271 91% 65% / 0.15)" }}>
+                <Lock style={{ color: "hsl(271 91% 70%)", width: 14, height: 14, marginTop: 2, flexShrink: 0 }} />
+                <p className="text-[12px] leading-relaxed" style={{ color: subColor }}>
+                  Всі дані зберігаються <span className="text-white">локально</span> і нікуди не передаються.
+                  Ви можете будь-коли скинути сесію.
+                </p>
+              </div>
+
+              <button onClick={() => setStep("apiid")}
+                className="w-full py-3.5 rounded-2xl font-display font-bold text-sm flex items-center justify-center gap-2"
+                style={convexBtn}>
+                <ArrowRight className="h-4 w-4" /> Продовжити
+              </button>
+            </div>
+          )}
+
           {/* ── API ID ── */}
           {step === "apiid" && (
             <div className="flex flex-col gap-3">
-              <div className="flex items-center gap-2 px-3 py-2 rounded-2xl"
-                style={{ background: "rgba(255,255,255,0.04)" }}>
-                <div className="w-7 h-7 rounded-xl flex items-center justify-center shrink-0"
-                  style={{ background: "linear-gradient(135deg, hsl(271 91% 65% / 0.30), hsl(316 90% 62% / 0.20))" }}>
-                  <Settings style={{ color: "hsl(271 91% 80%)", width: 14, height: 14 }} />
-                </div>
-                <div>
-                  <p className="font-display font-bold text-white text-[13px] leading-tight">Налаштування API</p>
-                  <p className="text-[11px] mt-0.5" style={{ color: subColor }}>Потрібно один раз</p>
-                </div>
-              </div>
-
-              <div className="flex flex-col gap-2 px-1">
+              <div className="flex flex-col gap-1.5 px-1">
                 <p className="text-[13px] leading-relaxed" style={{ color: subColor }}>
-                  Перейди на{" "}
+                  Відкрийте{" "}
                   <a href="https://my.telegram.org" target="_blank" rel="noopener noreferrer"
                     className="inline-flex items-center gap-0.5 font-semibold"
                     style={{ color: "hsl(271 91% 75%)" }}>
                     my.telegram.org <ExternalLink className="h-3 w-3" />
                   </a>
-                  {" "}→ <span className="text-white font-semibold">API Development Tools</span>
+                  {" "}→ <span className="text-white font-semibold">API development tools</span>
                 </p>
                 <p className="text-[13px] leading-relaxed" style={{ color: subColor }}>
-                  Скопіюй <span className="text-white font-semibold">App api_id</span> (число) та введи нижче.
+                  Скопіюйте <span className="text-white font-semibold">App api_id</span> — це <span className="text-white">число</span>.
                 </p>
+                <div className="flex items-center gap-1.5 px-2 py-1.5 rounded-xl mt-0.5"
+                  style={{ background: "rgba(255,255,255,0.04)", fontFamily: "monospace" }}>
+                  <span className="text-[11px]" style={{ color: "hsl(258 15% 55%)" }}>Приклад:</span>
+                  <span className="text-[13px] text-white font-semibold">20799080</span>
+                </div>
               </div>
 
               <div className="flex flex-col gap-1.5">
                 <label className="text-[11px] font-display font-semibold uppercase tracking-[0.10em]"
                   style={{ color: "hsl(258 15% 62%)" }}>
-                  API ID (число)
+                  API ID (лише цифри)
                 </label>
                 <input
                   type="tel"
-                  placeholder="12345678"
+                  placeholder="20799080"
                   value={apiIdInput}
                   onChange={(e) => setApiIdInput(e.target.value.replace(/\D/g, ""))}
                   className={inputCls}
@@ -253,29 +297,96 @@ export function AuthModal({ onClose, onSuccess }: AuthModalProps) {
               <button
                 onClick={() => {
                   if (apiIdInput.length < 5) {
-                    toast({ title: "Введіть API ID", description: "Мінімум 5 цифр", variant: "destructive" });
+                    toast({ title: "Невірний API ID", description: "API ID складається лише з цифр (мінімум 5)", variant: "destructive" });
                     return;
                   }
-                  setStep("intro");
+                  setStep("apihash");
                 }}
                 className="w-full py-3.5 rounded-2xl font-display font-bold text-sm flex items-center justify-center gap-2"
                 style={convexBtn}>
-                <ArrowRight className="h-4 w-4" /> Продовжити
+                <ArrowRight className="h-4 w-4" /> Далі — API Hash
               </button>
 
-              <button onClick={() => setStep("intro")}
+              <button onClick={() => setStep("prep")}
                 className="text-center text-xs py-1.5"
                 style={{ color: "hsl(258 15% 55%)" }}>
-                Вже налаштовано — пропустити
+                ← Назад
               </button>
             </div>
           )}
 
-          {/* ── INTRO ── */}
+          {/* ── API HASH ── */}
+          {step === "apihash" && (
+            <div className="flex flex-col gap-3">
+              <div className="flex flex-col gap-1.5 px-1">
+                <p className="text-[13px] leading-relaxed" style={{ color: subColor }}>
+                  На тій же сторінці{" "}
+                  <a href="https://my.telegram.org" target="_blank" rel="noopener noreferrer"
+                    className="inline-flex items-center gap-0.5 font-semibold"
+                    style={{ color: "hsl(271 91% 75%)" }}>
+                    my.telegram.org <ExternalLink className="h-3 w-3" />
+                  </a>
+                  {" "}знайдіть <span className="text-white font-semibold">App api_hash</span> — довгий буквено-цифровий рядок.
+                </p>
+                <div className="flex items-center gap-1.5 px-2 py-1.5 rounded-xl mt-0.5"
+                  style={{ background: "rgba(255,255,255,0.04)", fontFamily: "monospace" }}>
+                  <span className="text-[11px]" style={{ color: "hsl(258 15% 55%)" }}>Приклад:</span>
+                  <span className="text-[12px] text-white font-semibold tracking-wide">a1b2c3d4e5f6g7h8</span>
+                </div>
+                <p className="text-[11px]" style={{ color: "hsl(258 15% 55%)" }}>
+                  ⚠️ Hash чутливий до регістру — копіюйте точно як є.
+                </p>
+              </div>
+
+              <div className="flex flex-col gap-1.5">
+                <label className="text-[11px] font-display font-semibold uppercase tracking-[0.10em]"
+                  style={{ color: "hsl(258 15% 62%)" }}>
+                  API Hash
+                </label>
+                <input
+                  type="text"
+                  placeholder="a1b2c3d4e5f6g7h8i9j0"
+                  value={apiHashInput}
+                  onChange={(e) => setApiHashInput(e.target.value.trim())}
+                  className={`${inputCls} font-mono`}
+                  style={inputStyle}
+                  onFocus={inputFocus} onBlur={inputBlur}
+                  autoCapitalize="none"
+                  autoCorrect="off"
+                  spellCheck={false}
+                />
+              </div>
+
+              <button
+                onClick={() => {
+                  if (apiHashInput.length < 10) {
+                    toast({ title: "Невірний API Hash", description: "Hash має бути довгим буквено-цифровим рядком", variant: "destructive" });
+                    return;
+                  }
+                  setStep("phone");
+                }}
+                className="w-full py-3.5 rounded-2xl font-display font-bold text-sm flex items-center justify-center gap-2"
+                style={convexBtn}>
+                <ArrowRight className="h-4 w-4" /> Далі — Авторизація
+              </button>
+
+              <button onClick={() => setStep("apiid")}
+                className="text-center text-xs py-1.5"
+                style={{ color: "hsl(258 15% 55%)" }}>
+                ← Назад
+              </button>
+            </div>
+          )}
+
+          {/* ── INTRO (акаунт вже підключено) ── */}
           {step === "intro" && (
-            <>
-              {authStatus?.authenticated ? (
-                <div className="flex flex-col gap-3">
+            <div className="flex flex-col gap-3">
+              {authStatus === undefined ? (
+                <div className="flex items-center justify-center py-6">
+                  <Loader2 className="h-5 w-5 animate-spin" style={{ color: "hsl(271 91% 65%)" }} />
+                </div>
+              ) : authStatus.authenticated ? (
+                <>
                   <div className="flex items-center gap-3 px-3 py-2.5 rounded-2xl"
                     style={{ background: "hsl(271 91% 65% / 0.10)", border: "1px solid hsl(271 91% 65% / 0.20)" }}>
                     <CheckCircle2 className="h-5 w-5 shrink-0" style={{ color: "hsl(271 91% 65%)" }} />
@@ -287,64 +398,29 @@ export function AuthModal({ onClose, onSuccess }: AuthModalProps) {
                       </p>
                     </div>
                   </div>
-                  <p className="text-sm leading-relaxed px-1" style={{ color: subColor }}>
-                    Ваш акаунт підключений. Можете відключити або продовжити.
-                  </p>
+                  <div className="flex flex-col gap-1.5 px-1">
+                    {["📢 Розсилки — надсилання від вашого імені",
+                      "🔍 OSINT — пошук та аналіз груп",
+                      "🕷️ Парсери — збір учасників та даних"].map(line => (
+                      <p key={line} className="text-[12px]" style={{ color: subColor }}>{line}</p>
+                    ))}
+                    <p className="text-[11px] mt-1" style={{ color: "hsl(258 15% 52%)" }}>
+                      Сесія збережена — повторний вхід не потрібен.
+                    </p>
+                  </div>
                   <button onClick={onSuccess}
                     className="w-full py-3.5 rounded-2xl font-display font-bold text-sm"
                     style={convexBtn}>
-                    Перейти до панелі
+                    🚀 Панель керування
                   </button>
                   <button onClick={handleLogout} disabled={logout.isPending}
                     className="w-full py-3 rounded-2xl font-display font-semibold text-sm transition-colors"
                     style={{ background: "rgba(255,255,255,0.05)", color: "hsl(0 85% 65%)", border: "1px solid hsl(0 60% 40% / 0.25)" }}>
                     {logout.isPending ? <Loader2 className="h-4 w-4 animate-spin mx-auto" /> : "Відключити акаунт"}
                   </button>
-                </div>
-              ) : (
-                <div className="flex flex-col gap-2">
-                  {[
-                    {
-                      icon: Bot,
-                      title: "Що це?",
-                      desc: "GROUP AGENT використовує ваш Telegram акаунт для пошуку груп, автовступу та розсилок — без сторонніх сервісів.",
-                    },
-                    {
-                      icon: Fingerprint,
-                      title: "Що потрібно?",
-                      desc: "Лише номер телефону вашого Telegram. Код підтвердження надійде прямо в додаток.",
-                    },
-                    {
-                      icon: Lock,
-                      title: "Безпечно?",
-                      desc: "Сесія зберігається на сервері. Ніхто, крім вас, не має доступу до акаунту.",
-                    },
-                    {
-                      icon: Gem,
-                      title: "Кому підходить?",
-                      desc: "Telegram Business або Premium акаунт — для масових дій без обмежень.",
-                    },
-                  ].map(({ icon: Icon, title, desc }) => (
-                    <div key={title} className="flex items-start gap-2 px-3 py-2 rounded-2xl"
-                      style={{ background: "rgba(255,255,255,0.04)" }}>
-                      <div className="w-7 h-7 rounded-xl flex items-center justify-center shrink-0 mt-px"
-                        style={{ background: "linear-gradient(135deg, hsl(271 91% 65% / 0.30), hsl(316 90% 62% / 0.20))" }}>
-                        <Icon style={{ color: "hsl(271 91% 80%)", width: 15, height: 15 }} />
-                      </div>
-                      <div>
-                        <p className="font-display font-bold text-white text-[13px] leading-tight">{title}</p>
-                        <p className="text-[12px] leading-relaxed mt-0.5" style={{ color: subColor }}>{desc}</p>
-                      </div>
-                    </div>
-                  ))}
-                  <button onClick={() => setStep("phone")}
-                    className="w-full py-3.5 rounded-2xl font-display font-bold text-sm flex items-center justify-center gap-2 mt-2"
-                    style={convexBtn}>
-                    <Smartphone className="h-4 w-4" /> Продовжити
-                  </button>
-                </div>
-              )}
-            </>
+                </>
+              ) : null}
+            </div>
           )}
 
           {/* ── PHONE ── */}

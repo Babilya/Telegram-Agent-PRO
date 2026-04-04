@@ -144,15 +144,18 @@ export function AuthModal({ onClose, onSuccess }: AuthModalProps) {
 
   return (
     <div
-      className="fixed inset-0 z-[100] flex items-end sm:items-center justify-center p-0 sm:p-4"
-      style={{ background: "rgba(0,0,0,0.65)", backdropFilter: "blur(6px)" }}
+      className="fixed inset-0 z-[100] flex items-center justify-center p-4"
+      style={{ background: "rgba(10,6,28,0.45)", backdropFilter: "blur(18px)", WebkitBackdropFilter: "blur(18px)" }}
       onClick={(e) => e.target === e.currentTarget && onClose()}
     >
       <div
-        className="relative w-full sm:max-w-md rounded-t-3xl sm:rounded-3xl overflow-hidden flex flex-col"
+        className="relative w-full max-w-md rounded-3xl overflow-hidden flex flex-col"
         style={{
-          ...glassPanel,
-          background: "hsl(258 38% 8%)",
+          background: "hsl(258 38% 9% / 0.92)",
+          backdropFilter: "blur(32px)",
+          WebkitBackdropFilter: "blur(32px)",
+          border: "1px solid rgba(255,255,255,0.09)",
+          boxShadow: "0 24px 64px rgba(0,0,0,0.55), inset 0 1px 0 rgba(255,255,255,0.07)",
           maxHeight: "90dvh",
         }}
       >
@@ -170,7 +173,7 @@ export function AuthModal({ onClose, onSuccess }: AuthModalProps) {
           </div>
           <button onClick={onClose}
             className="w-8 h-8 rounded-xl flex items-center justify-center transition-colors"
-            style={{ background: "rgba(255,255,255,0.07)", color: "hsl(258 10% 60%)" }}>
+            style={{ background: "rgba(255,255,255,0.07)", color: "hsl(258 10% 70%)" }}>
             <X className="h-4 w-4" />
           </button>
         </div>
@@ -203,13 +206,13 @@ export function AuthModal({ onClose, onSuccess }: AuthModalProps) {
                     <CheckCircle2 className="h-6 w-6 shrink-0" style={{ color: "hsl(271 91% 65%)" }} />
                     <div>
                       <p className="font-display font-bold text-white text-sm">Акаунт підключено</p>
-                      <p className="text-xs mt-0.5" style={{ color: "hsl(258 10% 65%)" }}>
+                      <p className="text-xs mt-0.5" style={{ color: "hsl(258 15% 75%)" }}>
                         {authStatus.firstName && `${authStatus.firstName} · `}
                         {authStatus.username ? `@${authStatus.username}` : authStatus.phone}
                       </p>
                     </div>
                   </div>
-                  <p className="text-sm leading-relaxed" style={{ color: "hsl(258 10% 65%)" }}>
+                  <p className="text-sm leading-relaxed" style={{ color: "hsl(258 15% 75%)" }}>
                     Ваш акаунт вже підключений. Можете відключити його або продовжити роботу.
                   </p>
                   <button onClick={onSuccess}
@@ -237,7 +240,7 @@ export function AuthModal({ onClose, onSuccess }: AuthModalProps) {
                         <span className="text-xl shrink-0">{emoji}</span>
                         <div>
                           <p className="font-display font-bold text-white text-sm leading-tight">{title}</p>
-                          <p className="text-xs leading-relaxed mt-0.5" style={{ color: "hsl(258 10% 60%)" }}>{desc}</p>
+                          <p className="text-xs leading-relaxed mt-0.5" style={{ color: "hsl(258 15% 75%)" }}>{desc}</p>
                         </div>
                       </div>
                     ))}
@@ -252,7 +255,7 @@ export function AuthModal({ onClose, onSuccess }: AuthModalProps) {
             <div className="flex flex-col gap-5">
               <div className="p-4 rounded-2xl"
                 style={{ background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.07)" }}>
-                <p className="text-sm leading-relaxed" style={{ color: "hsl(258 10% 72%)" }}>
+                <p className="text-sm leading-relaxed" style={{ color: "hsl(258 15% 78%)" }}>
                   Введіть номер телефону у форматі <span className="font-mono text-white">+380XXXXXXXXX</span>.
                   Telegram надішле вам код підтвердження у застосунок.
                 </p>
@@ -260,7 +263,7 @@ export function AuthModal({ onClose, onSuccess }: AuthModalProps) {
               <form onSubmit={phoneForm.handleSubmit(onPhoneSubmit)} className="flex flex-col gap-3">
                 <div className="flex flex-col gap-1.5">
                   <label className="text-xs font-display font-semibold uppercase tracking-widest"
-                    style={{ color: "hsl(258 10% 55%)" }}>
+                    style={{ color: "hsl(258 15% 68%)" }}>
                     Номер телефону
                   </label>
                   <input
@@ -296,7 +299,7 @@ export function AuthModal({ onClose, onSuccess }: AuthModalProps) {
             <div className="flex flex-col gap-5">
               <div className="p-4 rounded-2xl"
                 style={{ background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.07)" }}>
-                <p className="text-sm leading-relaxed" style={{ color: "hsl(258 10% 72%)" }}>
+                <p className="text-sm leading-relaxed" style={{ color: "hsl(258 15% 78%)" }}>
                   Код підтвердження надіслано на <span className="font-mono text-white">{phoneNumber}</span>.
                   Відкрийте Telegram і введіть 5-значний код нижче.
                 </p>
@@ -304,7 +307,7 @@ export function AuthModal({ onClose, onSuccess }: AuthModalProps) {
               <form onSubmit={codeForm.handleSubmit(onCodeSubmit)} className="flex flex-col gap-3">
                 <div className="flex flex-col gap-1.5">
                   <label className="text-xs font-display font-semibold uppercase tracking-widest"
-                    style={{ color: "hsl(258 10% 55%)" }}>
+                    style={{ color: "hsl(258 15% 68%)" }}>
                     Код з Telegram
                   </label>
                   <input
@@ -334,7 +337,7 @@ export function AuthModal({ onClose, onSuccess }: AuthModalProps) {
                 </button>
                 <button type="button" onClick={() => setStep("phone")}
                   className="text-center text-xs py-2 transition-colors"
-                  style={{ color: "hsl(258 10% 50%)" }}>
+                  style={{ color: "hsl(258 15% 62%)" }}>
                   ← Змінити номер
                 </button>
               </form>
@@ -346,14 +349,14 @@ export function AuthModal({ onClose, onSuccess }: AuthModalProps) {
             <div className="flex flex-col gap-5">
               <div className="p-4 rounded-2xl"
                 style={{ background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.07)" }}>
-                <p className="text-sm leading-relaxed" style={{ color: "hsl(258 10% 72%)" }}>
+                <p className="text-sm leading-relaxed" style={{ color: "hsl(258 15% 78%)" }}>
                   На вашому акаунті увімкнена двофакторна авторизація (2FA). Введіть пароль, який ви встановили у Telegram → Налаштування → Конфіденційність.
                 </p>
               </div>
               <form onSubmit={passwordForm.handleSubmit(onPasswordSubmit)} className="flex flex-col gap-3">
                 <div className="flex flex-col gap-1.5">
                   <label className="text-xs font-display font-semibold uppercase tracking-widest"
-                    style={{ color: "hsl(258 10% 55%)" }}>
+                    style={{ color: "hsl(258 15% 68%)" }}>
                     Пароль 2FA
                   </label>
                   <input
@@ -397,7 +400,7 @@ export function AuthModal({ onClose, onSuccess }: AuthModalProps) {
               </div>
               <div>
                 <h3 className="font-display font-black text-xl text-white">Акаунт підключено!</h3>
-                <p className="text-sm mt-1" style={{ color: "hsl(258 10% 65%)" }}>
+                <p className="text-sm mt-1" style={{ color: "hsl(258 15% 75%)" }}>
                   Все готово. Тепер можна шукати групи та запускати розсилки.
                 </p>
               </div>

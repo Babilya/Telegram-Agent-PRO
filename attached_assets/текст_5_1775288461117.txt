@@ -1,0 +1,4 @@
+SECURITY AGENTS, [2 квіт. 2026, 17:53]
+✅ API ID збережено.
+
+Тепер введіть API Hash:

@@ -460,14 +460,9 @@ export function AuthModal({ onClose, onSuccess }: AuthModalProps) {
           {/* ══ НОМЕР ТЕЛЕФОНУ ══ */}
           {step === "phone" && (
             <>
-              <div className="flex flex-col gap-1 px-0.5">
-                <p className="text-[13px] leading-relaxed" style={{ color: SUB }}>
-                  Введіть номер у <span className="text-white font-medium">міжнародному форматі</span> — без пробілів і дужок.
-                </p>
-                <p className="text-[13px] leading-relaxed" style={{ color: SUB }}>
-                  Telegram надішле код підтвердження в додаток або SMS.
-                </p>
-              </div>
+              <p className="text-[13px] leading-relaxed px-0.5" style={{ color: SUB }}>
+                Введіть номер у <span className="text-white font-medium">міжнародному форматі</span> — без пробілів і дужок. Telegram надішле код підтвердження в додаток або SMS.
+              </p>
 
               <div className="flex items-center gap-2 px-3 py-2 rounded-xl"
                 style={{ background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.06)" }}>

@@ -13,17 +13,50 @@ const gradientText: React.CSSProperties = {
   WebkitTextFillColor: "transparent",
 };
 
-const glassCard: React.CSSProperties = {
-  background: "rgba(255,255,255,0.05)",
-  border: "1px solid rgba(255,255,255,0.10)",
-  backdropFilter: "blur(16px)",
-  WebkitBackdropFilter: "blur(16px)",
-  boxShadow: "0 4px 20px rgba(0,0,0,0.25), inset 0 1px 0 rgba(255,255,255,0.08)",
+/* Transparent card with convex (raised) effect — no border */
+const convexCard: React.CSSProperties = {
+  background: "rgba(255,255,255,0.035)",
+  border: "none",
+  boxShadow:
+    "0 4px 16px rgba(0,0,0,0.32)," +
+    "inset 0 1px 0 rgba(255,255,255,0.09)," +
+    "inset 0 -1px 0 rgba(0,0,0,0.18)",
 };
 
 const iconWrap: React.CSSProperties = {
-  background: "linear-gradient(135deg, hsl(271 91% 65% / 0.28), hsl(316 90% 62% / 0.18))",
-  border: "1px solid hsl(271 91% 65% / 0.4)",
+  background: "linear-gradient(135deg, hsl(271 91% 65% / 0.3), hsl(316 90% 62% / 0.2))",
+  border: "none",
+  boxShadow:
+    "0 3px 10px rgba(0,0,0,0.3)," +
+    "inset 0 1px 0 rgba(255,255,255,0.15)," +
+    "inset 0 -1px 0 rgba(0,0,0,0.2)",
+  flexShrink: 0,
+};
+
+/* Convex gradient button — no big outer glow */
+const convexBtn: React.CSSProperties = {
+  background: "linear-gradient(160deg, hsl(271 91% 68%), hsl(316 90% 60%))",
+  border: "none",
+  color: "white",
+  boxShadow:
+    "0 4px 16px rgba(0,0,0,0.35)," +
+    "inset 0 1px 0 rgba(255,255,255,0.22)," +
+    "inset 0 -1px 0 rgba(0,0,0,0.18)",
+};
+
+/* Square logo icon with convex effect */
+const logoIcon: React.CSSProperties = {
+  background: "linear-gradient(160deg, hsl(271 91% 68%), hsl(316 90% 60%))",
+  borderRadius: 10,
+  boxShadow:
+    "0 3px 10px rgba(0,0,0,0.35)," +
+    "inset 0 1px 0 rgba(255,255,255,0.22)," +
+    "inset 0 -1px 0 rgba(0,0,0,0.18)",
+  width: 34,
+  height: 34,
+  display: "flex",
+  alignItems: "center",
+  justifyContent: "center",
   flexShrink: 0,
 };
 
@@ -46,7 +79,7 @@ const pages = [
     desc: "Всі операції виконуються через офіційний Telegram API від вашого акаунту.",
     cards: [
       { icon: Search,    title: "Пошук груп",      desc: "Публічні групи й канали за ключовим словом, фільтри за мін./макс. учасниками." },
-      { icon: Clock,     title: "Гнучкий розклад", desc: "Щогодини, кожні 2/4/8/12 годин, щодня або довільний інтервал." },
+      { icon: Clock,     title: "Гнучкий розклад", desc: "Щогодини, кожні 2/4/8/12 годин, щодня або довільний інтервал у хвилинах." },
       { icon: Megaphone, title: "Кампанії",         desc: "Запускайте, призупиняйте та відстежуйте статус розсилки." },
       { icon: Users,     title: "Збережені групи",  desc: "Масово обирайте й вступайте в групи одним натисканням." },
     ],
@@ -98,51 +131,18 @@ export default function Landing() {
         }}
       />
 
-      {/* ── TOP: Logo + Progress ── */}
-      <div className="relative z-20 shrink-0 px-5 pt-5 pb-3 max-w-lg mx-auto w-full">
-        {/* Logo row */}
-        <div className="flex items-center justify-between mb-4">
-          <div className="flex items-center gap-2">
-            <div
-              className="w-8 h-8 rounded-lg flex items-center justify-center"
-              style={{
-                background: "linear-gradient(135deg, hsl(271 91% 65%), hsl(316 90% 62%))",
-                boxShadow: "0 0 14px hsl(271 91% 65% / 0.55)",
-              }}
-            >
-              <Zap className="h-4 w-4 text-white" />
-            </div>
-            <span className="font-display font-black text-lg" style={gradientText}>TG_CTRL</span>
+      {/* ── TOP: Logo only ── */}
+      <div className="relative z-20 shrink-0 px-5 pt-5 pb-2 max-w-lg mx-auto w-full">
+        <div className="flex items-center gap-2">
+          <div style={logoIcon}>
+            <Zap className="h-4 w-4 text-white" />
           </div>
-          <span className="font-mono text-xs" style={{ color: "hsl(258 10% 50%)" }}>
-            {page + 1} / {TOTAL_PAGES}
-          </span>
-        </div>
-
-        {/* Progress segments */}
-        <div className="flex gap-1.5">
-          {Array.from({ length: TOTAL_PAGES }).map((_, i) => (
-            <button
-              key={i}
-              onClick={() => setPage(i)}
-              className="h-1 flex-1 rounded-full overflow-hidden"
-              style={{ background: "hsl(258 30% 18%)" }}
-            >
-              <div
-                className="h-full rounded-full transition-all duration-500"
-                style={{
-                  width: i <= page ? "100%" : "0%",
-                  background: "linear-gradient(90deg, hsl(271 91% 65%), hsl(316 90% 62%))",
-                  opacity: i < page ? 0.4 : 1,
-                }}
-              />
-            </button>
-          ))}
+          <span className="font-display font-black text-lg" style={gradientText}>TG_CTRL</span>
         </div>
       </div>
 
-      {/* ── MIDDLE: Text ── */}
-      <div className="relative z-10 shrink-0 px-5 max-w-lg mx-auto w-full">
+      {/* ── TEXT: Badge + heading + desc ── */}
+      <div className="relative z-10 shrink-0 px-5 pb-3 max-w-lg mx-auto w-full">
         <div className="flex flex-col gap-1.5">
           <span
             className="text-xs font-display font-semibold tracking-widest uppercase"
@@ -167,18 +167,18 @@ export default function Landing() {
       </div>
 
       {/* ── CARDS: fills remaining space ── */}
-      <div className="relative z-10 flex-1 px-5 py-3 max-w-lg mx-auto w-full flex flex-col gap-2 min-h-0">
+      <div className="relative z-10 flex-1 px-5 max-w-lg mx-auto w-full flex flex-col gap-2 min-h-0">
         {current.cards.map(({ icon: Icon, title, desc }) => (
           <div
             key={title}
             className="flex items-center gap-3 rounded-2xl flex-1 min-h-0"
-            style={{ ...glassCard, padding: "clamp(10px,2.5vw,14px) clamp(12px,3vw,16px)" }}
+            style={{ ...convexCard, padding: "clamp(10px,2.5vw,14px) clamp(12px,3vw,16px)" }}
           >
             <div
               className="rounded-xl flex items-center justify-center"
-              style={{ ...iconWrap, width: 36, height: 36, minWidth: 36 }}
+              style={{ ...iconWrap, width: 36, height: 36 }}
             >
-              <Icon style={{ color: "hsl(271 91% 72%)", width: 16, height: 16 }} />
+              <Icon style={{ color: "hsl(271 91% 80%)", width: 16, height: 16 }} />
             </div>
             <div className="flex flex-col gap-0.5 min-w-0">
               <span
@@ -198,14 +198,13 @@ export default function Landing() {
         ))}
       </div>
 
-      {/* ── BOTTOM: Button ── */}
-      <div className="relative z-20 shrink-0 px-5 pt-2 pb-8 max-w-lg mx-auto w-full">
+      {/* ── BOTTOM: Button + dots below ── */}
+      <div className="relative z-20 shrink-0 px-5 pt-3 pb-7 max-w-lg mx-auto w-full flex flex-col items-center gap-3">
         <button
           onClick={next}
           className="w-full rounded-2xl font-display font-bold tracking-wide text-white"
           style={{
-            background: "linear-gradient(135deg, hsl(271 91% 65%), hsl(316 90% 62%))",
-            boxShadow: "0 0 28px hsl(271 91% 65% / 0.45), 0 0 56px hsl(316 90% 62% / 0.2)",
+            ...convexBtn,
             padding: "clamp(13px,3.5vw,16px)",
             fontSize: "clamp(0.875rem, 4vw, 1rem)",
           }}
@@ -213,6 +212,25 @@ export default function Landing() {
         >
           {page < TOTAL_PAGES - 1 ? "ДАЛІ" : "АВТОРИЗУВАТИСЯ"}
         </button>
+
+        {/* Progress dots — small, centered, below button */}
+        <div className="flex gap-2 items-center">
+          {Array.from({ length: TOTAL_PAGES }).map((_, i) => (
+            <button
+              key={i}
+              onClick={() => setPage(i)}
+              className="rounded-full transition-all duration-300"
+              style={{
+                width: page === i ? 20 : 6,
+                height: 4,
+                background:
+                  page === i
+                    ? "linear-gradient(90deg, hsl(271 91% 65%), hsl(316 90% 62%))"
+                    : "hsl(258 30% 28%)",
+              }}
+            />
+          ))}
+        </div>
       </div>
     </div>
   );

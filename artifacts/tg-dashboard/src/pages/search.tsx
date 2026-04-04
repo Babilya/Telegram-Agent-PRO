@@ -9,18 +9,13 @@ import {
   useJoinGroups
 } from "@workspace/api-client-react";
 import { useQueryClient } from "@tanstack/react-query";
-import { Search as SearchIcon, Save, LogIn, Loader2, Users, Filter } from "lucide-react";
+import {
+  Search as SearchIcon, Save, LogIn, Loader2, Users, ExternalLink,
+} from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
-
-import { Card, CardContent } from "@/components/ui/card";
-import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Form, FormControl, FormField, FormItem, FormLabel } from "@/components/ui/form";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Badge } from "@/components/ui/badge";
-import {
-  Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
-} from "@/components/ui/table";
 import { SearchGroupsGroupType, TelegramGroup } from "@workspace/api-zod/src/generated/types";
 
 const searchSchema = z.object({
@@ -33,16 +28,20 @@ const searchSchema = z.object({
 const typeLabel: Record<string, string> = {
   group: "Група", supergroup: "Супергрупа", channel: "Канал",
 };
+const typeColor: Record<string, string> = {
+  group: "hsl(142 71% 45%)", supergroup: "hsl(271 91% 65%)", channel: "hsl(316 90% 62%)",
+};
+
+const inputCls = "w-full px-3 py-2.5 rounded-xl text-sm text-white bg-white/5 border border-white/10 focus:border-[hsl(271_91%_65%/0.5)] focus:outline-none transition-colors placeholder:text-white/30";
 
 export default function Search() {
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const [searchParams, setSearchParams] = useState<{
-    query?: string;
-    minMembers?: number;
-    maxMembers?: number;
+    query?: string; minMembers?: number; maxMembers?: number;
     groupType?: SearchGroupsGroupType;
   } | null>(null);
+  const [savedIds, setSavedIds] = useState<Set<string>>(new Set());
 
   const form = useForm<z.infer<typeof searchSchema>>({
     resolver: zodResolver(searchSchema),
@@ -60,6 +59,7 @@ export default function Search() {
   const joinGroups = useJoinGroups();
 
   const onSubmit = (values: z.infer<typeof searchSchema>) => {
+    setSavedIds(new Set());
     setSearchParams({
       query: values.query,
       minMembers: values.minMembers ? parseInt(values.minMembers) : undefined,
@@ -71,29 +71,27 @@ export default function Search() {
   const handleSave = (group: TelegramGroup) => {
     saveGroup.mutate({
       data: {
-        telegramId: group.id.toString(),
-        title: group.title,
-        username: group.username,
-        membersCount: group.membersCount,
-        type: group.type,
+        telegramId: group.id.toString(), title: group.title,
+        username: group.username, membersCount: group.membersCount, type: group.type,
       }
     }, {
-      onSuccess: () => toast({ title: "Збережено", description: `${group.title} додано до груп.` }),
-      onError: (err: any) => toast({ title: "Помилка збереження", description: err.message, variant: "destructive" }),
+      onSuccess: () => {
+        setSavedIds(prev => new Set([...prev, group.id.toString()]));
+        toast({ title: "Збережено", description: `${group.title} додано до груп.` });
+      },
+      onError: (err: any) => toast({ title: "Помилка", description: err.message, variant: "destructive" }),
     });
   };
 
   const handleJoinAndSave = (group: TelegramGroup) => {
     saveGroup.mutate({
       data: {
-        telegramId: group.id.toString(),
-        title: group.title,
-        username: group.username,
-        membersCount: group.membersCount,
-        type: group.type,
+        telegramId: group.id.toString(), title: group.title,
+        username: group.username, membersCount: group.membersCount, type: group.type,
       }
     }, {
       onSuccess: (savedGroup) => {
+        setSavedIds(prev => new Set([...prev, group.id.toString()]));
         joinGroups.mutate({ data: { groupIds: [savedGroup.id] } }, {
           onSuccess: () => toast({ title: "Вступ у чергу", description: `Запит на вступ до ${group.title} надіслано.` }),
           onError: (err: any) => toast({ title: "Помилка вступу", description: err.message, variant: "destructive" }),
@@ -104,148 +102,149 @@ export default function Search() {
   };
 
   return (
-    <div className="space-y-4 pb-2">
+    <div className="flex flex-col gap-4 pb-2">
       <div>
         <h1 className="text-2xl font-display font-black tracking-tight text-gradient">Пошук груп</h1>
-        <p className="text-muted-foreground text-sm">Знаходьте нові Telegram-групи за ключовими словами.</p>
+        <p className="text-muted-foreground text-sm">Знаходьте Telegram-групи за ключовими словами.</p>
       </div>
 
-      <Card className="border-border">
-        <CardContent className="p-4">
-          <Form {...form}>
-            <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-3">
-              <div className="flex gap-2 items-end">
-                <FormField control={form.control} name="query"
-                  render={({ field }) => (
-                    <FormItem className="flex-1">
-                      <FormLabel className="text-xs">Ключове слово</FormLabel>
-                      <FormControl>
-                        <Input placeholder="крипто, маркетинг, бізнес…" {...field} />
-                      </FormControl>
-                    </FormItem>
-                  )}
-                />
-                <FormField control={form.control} name="groupType"
-                  render={({ field }) => (
-                    <FormItem className="w-36">
-                      <FormLabel className="text-xs">Тип</FormLabel>
-                      <Select onValueChange={field.onChange} defaultValue={field.value}>
-                        <FormControl>
-                          <SelectTrigger>
-                            <SelectValue placeholder="Всі" />
-                          </SelectTrigger>
-                        </FormControl>
-                        <SelectContent>
-                          <SelectItem value="all">Всі типи</SelectItem>
-                          <SelectItem value="group">Група</SelectItem>
-                          <SelectItem value="supergroup">Супергрупа</SelectItem>
-                          <SelectItem value="channel">Канал</SelectItem>
-                        </SelectContent>
-                      </Select>
-                    </FormItem>
-                  )}
-                />
-              </div>
+      {/* Search form */}
+      <div className="rounded-2xl border border-border/50 bg-secondary/30 p-4">
+        <Form {...form}>
+          <form onSubmit={form.handleSubmit(onSubmit)} className="flex flex-col gap-3">
+            <div className="flex gap-2">
+              <FormField control={form.control} name="query"
+                render={({ field }) => (
+                  <FormItem className="flex-1">
+                    <FormControl>
+                      <input className={inputCls} placeholder="крипто, маркетинг, бізнес…" {...field} />
+                    </FormControl>
+                  </FormItem>
+                )}
+              />
+              <Button type="submit" disabled={isLoading} size="sm" className="h-10 shrink-0">
+                {isLoading
+                  ? <Loader2 className="h-4 w-4 animate-spin" />
+                  : <SearchIcon className="h-4 w-4" />}
+                <span className="ml-1.5 hidden sm:inline">Знайти</span>
+              </Button>
+            </div>
 
-              <div className="flex gap-2 items-end">
-                <FormField control={form.control} name="minMembers"
-                  render={({ field }) => (
-                    <FormItem className="flex-1">
-                      <FormLabel className="text-xs">Мін. учасників</FormLabel>
+            <div className="flex gap-2">
+              <FormField control={form.control} name="groupType"
+                render={({ field }) => (
+                  <FormItem className="flex-1">
+                    <Select onValueChange={field.onChange} defaultValue={field.value}>
                       <FormControl>
-                        <Input type="number" placeholder="0" {...field} />
+                        <SelectTrigger className="h-9 text-sm">
+                          <SelectValue placeholder="Тип" />
+                        </SelectTrigger>
                       </FormControl>
-                    </FormItem>
-                  )}
-                />
-                <FormField control={form.control} name="maxMembers"
-                  render={({ field }) => (
-                    <FormItem className="flex-1">
-                      <FormLabel className="text-xs">Макс. учасників</FormLabel>
-                      <FormControl>
-                        <Input type="number" placeholder="Без ліміту" {...field} />
-                      </FormControl>
-                    </FormItem>
-                  )}
-                />
-                <div className="pb-0.5">
-                  <Button type="submit" disabled={isLoading} size="sm" className="h-9">
-                    {isLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : <SearchIcon className="h-4 w-4" />}
-                    <span className="ml-1.5">Знайти</span>
-                  </Button>
-                </div>
-              </div>
-            </form>
-          </Form>
-        </CardContent>
-      </Card>
+                      <SelectContent>
+                        <SelectItem value="all">Всі типи</SelectItem>
+                        <SelectItem value="group">Група</SelectItem>
+                        <SelectItem value="supergroup">Супергрупа</SelectItem>
+                        <SelectItem value="channel">Канал</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </FormItem>
+                )}
+              />
+              <FormField control={form.control} name="minMembers"
+                render={({ field }) => (
+                  <FormItem className="flex-1">
+                    <FormControl>
+                      <input className={inputCls} type="number" placeholder="Від учасників" {...field} />
+                    </FormControl>
+                  </FormItem>
+                )}
+              />
+              <FormField control={form.control} name="maxMembers"
+                render={({ field }) => (
+                  <FormItem className="flex-1">
+                    <FormControl>
+                      <input className={inputCls} type="number" placeholder="До учасників" {...field} />
+                    </FormControl>
+                  </FormItem>
+                )}
+              />
+            </div>
+          </form>
+        </Form>
+      </div>
 
-      <div className="space-y-2">
-        <div className="flex items-center justify-between">
-          <h2 className="text-sm font-display font-bold tracking-tight">
-            Результати {data && <span className="text-muted-foreground font-normal">({data.total})</span>}
-          </h2>
-        </div>
-        <Card className="border-border overflow-hidden">
-          <Table>
-            <TableHeader className="bg-secondary/50">
-              <TableRow>
-                <TableHead>Назва</TableHead>
-                <TableHead>Тип</TableHead>
-                <TableHead className="text-right">Учасники</TableHead>
-                <TableHead className="text-right">Дії</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {isLoading ? (
-                <TableRow>
-                  <TableCell colSpan={4} className="h-24 text-center text-muted-foreground">
-                    <Loader2 className="h-6 w-6 animate-spin mx-auto" />
-                  </TableCell>
-                </TableRow>
-              ) : !data?.results?.length ? (
-                <TableRow>
-                  <TableCell colSpan={4} className="h-24 text-center text-muted-foreground text-sm">
-                    {searchParams?.query ? "Групи не знайдено." : "Введіть запит для пошуку груп."}
-                  </TableCell>
-                </TableRow>
-              ) : (
-                data.results.map((group) => (
-                  <TableRow key={group.id}>
-                    <TableCell>
-                      <div className="font-medium text-sm">{group.title}</div>
-                      {group.username && (
-                        <div className="text-xs text-muted-foreground font-mono">@{group.username}</div>
-                      )}
-                    </TableCell>
-                    <TableCell>
-                      <Badge variant="outline" className="uppercase text-[10px] tracking-wider font-mono">
+      {/* Results */}
+      <div>
+        {data && (
+          <p className="text-[12px] text-muted-foreground mb-2">
+            Результатів: <span className="text-white font-semibold">{data.total}</span>
+          </p>
+        )}
+
+        {isLoading ? (
+          <div className="flex justify-center py-12">
+            <Loader2 className="h-6 w-6 animate-spin text-primary" />
+          </div>
+        ) : !data?.results?.length ? (
+          <div className="rounded-2xl border border-border/50 bg-secondary/20 py-12 text-center text-muted-foreground text-sm">
+            {searchParams?.query ? "Групи не знайдено. Спробуйте інший запит." : "Введіть запит для пошуку груп."}
+          </div>
+        ) : (
+          <div className="flex flex-col gap-2">
+            {data.results.map((group) => {
+              const isSaved = savedIds.has(group.id.toString());
+              return (
+                <div key={group.id} className="rounded-2xl border border-border/50 bg-secondary/30 px-4 py-3 flex items-center gap-3">
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <p className="font-display font-bold text-[14px] text-white truncate">{group.title}</p>
+                      <span className="text-[10px] font-semibold px-1.5 py-0.5 rounded-full shrink-0"
+                        style={{ background: `${typeColor[group.type] ?? "hsl(258 15% 40%)"}18`, color: typeColor[group.type] ?? "hsl(258 15% 60%)" }}>
                         {typeLabel[group.type] || group.type}
-                      </Badge>
-                    </TableCell>
-                    <TableCell className="text-right font-mono text-sm">
-                      {group.membersCount ? new Intl.NumberFormat("uk").format(group.membersCount) : "—"}
-                    </TableCell>
-                    <TableCell className="text-right">
-                      <div className="flex justify-end gap-1">
-                        <Button variant="outline" size="sm"
-                          onClick={() => handleSave(group)}
-                          disabled={saveGroup.isPending}>
+                      </span>
+                    </div>
+                    <div className="flex items-center gap-3 mt-0.5">
+                      {group.username && (
+                        <span className="text-[11px] text-muted-foreground font-mono">@{group.username}</span>
+                      )}
+                      {group.membersCount && (
+                        <span className="flex items-center gap-1 text-[11px] text-muted-foreground">
+                          <Users className="h-3 w-3" />
+                          {new Intl.NumberFormat("uk").format(group.membersCount)}
+                        </span>
+                      )}
+                    </div>
+                  </div>
+
+                  <div className="flex items-center gap-1 shrink-0">
+                    {group.username && (
+                      <a href={`https://t.me/${group.username}`} target="_blank" rel="noopener noreferrer">
+                        <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground">
+                          <ExternalLink className="h-3.5 w-3.5" />
+                        </Button>
+                      </a>
+                    )}
+                    {isSaved ? (
+                      <span className="text-[11px] text-primary font-semibold px-2">✓ Збережено</span>
+                    ) : (
+                      <>
+                        <Button variant="outline" size="icon" className="h-8 w-8"
+                          onClick={() => handleSave(group)} disabled={saveGroup.isPending}>
                           <Save className="h-3.5 w-3.5" />
                         </Button>
-                        <Button size="sm"
+                        <Button size="sm" className="h-8"
                           onClick={() => handleJoinAndSave(group)}
                           disabled={joinGroups.isPending || saveGroup.isPending}>
                           <LogIn className="h-3.5 w-3.5 mr-1" /> Вступ
                         </Button>
-                      </div>
-                    </TableCell>
-                  </TableRow>
-                ))
-              )}
-            </TableBody>
-          </Table>
-        </Card>
+                      </>
+                    )}
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        )}
       </div>
     </div>
   );

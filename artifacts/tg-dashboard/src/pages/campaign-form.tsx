@@ -164,11 +164,17 @@ export default function CampaignForm() {
               <FormField control={form.control} name="message"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel className="text-xs">Текст повідомлення</FormLabel>
+                    <div className="flex items-center justify-between">
+                      <FormLabel className="text-xs">Текст повідомлення</FormLabel>
+                      <span className={`text-[11px] font-mono ${field.value?.length > 4000 ? "text-destructive" : field.value?.length > 3000 ? "text-yellow-500" : "text-muted-foreground"}`}>
+                        {field.value?.length ?? 0} / 4096
+                      </span>
+                    </div>
                     <FormControl>
                       <Textarea
                         placeholder="Введіть текст, який буде надсилатись у групи…"
-                        className="min-h-[120px] font-mono text-sm"
+                        className="min-h-[140px] font-mono text-sm"
+                        maxLength={4096}
                         {...field}
                       />
                     </FormControl>

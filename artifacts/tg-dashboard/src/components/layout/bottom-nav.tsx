@@ -1,12 +1,12 @@
 import { Link, useLocation } from "wouter";
-import { LayoutDashboard, Search, Users, Megaphone, Activity } from "lucide-react";
+import { LayoutDashboard, Search, Users, Megaphone, Bug } from "lucide-react";
 
 const nav = [
   { href: "/dashboard", icon: LayoutDashboard, label: "Огляд" },
   { href: "/search",    icon: Search,          label: "Пошук" },
   { href: "/groups",    icon: Users,            label: "Групи" },
   { href: "/campaigns", icon: Megaphone,        label: "Кампанії" },
-  { href: "/jobs",      icon: Activity,         label: "Журнал" },
+  { href: "/parsers",   icon: Bug,              label: "Парсер" },
 ];
 
 export function BottomNav() {

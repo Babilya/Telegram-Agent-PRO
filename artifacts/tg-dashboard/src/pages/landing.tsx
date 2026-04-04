@@ -108,7 +108,10 @@ export default function Landing() {
 
   const next = () => {
     if (page < TOTAL_PAGES - 1) setPage(page + 1);
-    else setShowAuth(true);
+    else {
+      localStorage.setItem("tgctrl_landing_seen", "1");
+      setShowAuth(true);
+    }
   };
 
   return (

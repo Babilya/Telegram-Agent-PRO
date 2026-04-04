@@ -142,77 +142,80 @@ export function AuthModal({ onClose, onSuccess }: AuthModalProps) {
 
   const stepIndex = visibleSteps.indexOf(step);
 
+  const subColor = "hsl(258 15% 72%)";
+  const inputCls = "w-full px-4 py-3 rounded-2xl text-sm text-white outline-none transition-all";
+  const inputStyle = { background: "rgba(255,255,255,0.06)", border: "1px solid rgba(255,255,255,0.10)" };
+  const inputFocus = (e: React.FocusEvent<HTMLInputElement>) => { e.currentTarget.style.borderColor = "hsl(271 91% 65% / 0.65)"; };
+  const inputBlur  = (e: React.FocusEvent<HTMLInputElement>) => { e.currentTarget.style.borderColor = "rgba(255,255,255,0.10)"; };
+
   return (
     <div
-      className="fixed inset-0 z-[100] flex items-center justify-center p-4"
-      style={{ background: "rgba(10,6,28,0.45)", backdropFilter: "blur(18px)", WebkitBackdropFilter: "blur(18px)" }}
+      className="fixed inset-0 z-[100] flex items-center justify-center p-5"
+      style={{ background: "rgba(5,3,14,0.20)", backdropFilter: "blur(10px)", WebkitBackdropFilter: "blur(10px)" }}
       onClick={(e) => e.target === e.currentTarget && onClose()}
     >
       <div
-        className="relative w-full max-w-md rounded-3xl overflow-hidden flex flex-col"
+        className="relative w-full max-w-md rounded-[28px] overflow-hidden"
         style={{
-          background: "hsl(258 38% 9% / 0.95)",
-          backdropFilter: "blur(40px)",
-          WebkitBackdropFilter: "blur(40px)",
-          boxShadow: "0 32px 80px rgba(0,0,0,0.72), 0 0 0 1px rgba(255,255,255,0.06), 0 0 60px hsl(271 91% 65% / 0.12), inset 0 1px 0 rgba(255,255,255,0.08)",
-          maxHeight: "88dvh",
+          background: "linear-gradient(170deg, hsl(268 52% 14%) 0%, hsl(260 42% 10%) 45%, hsl(250 36% 8%) 100%)",
+          boxShadow: "0 40px 90px rgba(0,0,0,0.80), 0 0 0 1px rgba(255,255,255,0.07), 0 0 80px hsl(271 91% 60% / 0.14), inset 0 1px 0 rgba(255,255,255,0.10)",
         }}
       >
         {/* Header */}
-        <div className="flex items-center justify-between px-5 pt-5 pb-4 shrink-0"
+        <div className="flex items-center justify-between px-4 pt-4 pb-3"
           style={{ borderBottom: "1px solid rgba(255,255,255,0.07)" }}>
           <div className="flex flex-col gap-0.5">
-            <span className="text-xs font-display font-semibold uppercase tracking-widest"
+            <span className="text-[11px] font-display font-semibold uppercase tracking-[0.12em]"
               style={{ color: "hsl(316 90% 65%)" }}>
               Авторизація Telegram
             </span>
-            <h2 className="text-lg font-display font-black text-white leading-tight">
+            <h2 className="text-[17px] font-display font-black text-white leading-tight">
               {stepInfo[step].label}
             </h2>
           </div>
           <button onClick={onClose}
-            className="w-8 h-8 rounded-xl flex items-center justify-center transition-colors"
-            style={{ background: "rgba(255,255,255,0.07)", color: "hsl(258 10% 70%)" }}>
+            className="w-8 h-8 rounded-xl flex items-center justify-center"
+            style={{ background: "rgba(255,255,255,0.07)", color: "hsl(258 15% 65%)" }}>
             <X className="h-4 w-4" />
           </button>
         </div>
 
         {/* Step progress */}
-        <div className="px-5 py-3 shrink-0 flex gap-1.5">
+        <div className="px-4 pt-3 pb-2 flex gap-1.5">
           {visibleSteps.map((_, i) => (
-            <div key={i} className="h-1 flex-1 rounded-full overflow-hidden"
-              style={{ background: "hsl(258 30% 18%)" }}>
+            <div key={i} className="h-[3px] flex-1 rounded-full overflow-hidden"
+              style={{ background: "rgba(255,255,255,0.08)" }}>
               <div className="h-full rounded-full transition-all duration-500"
                 style={{
                   width: i <= stepIndex ? "100%" : "0%",
                   background: "linear-gradient(90deg, hsl(271 91% 65%), hsl(316 90% 62%))",
-                  opacity: i < stepIndex ? 0.45 : 1,
+                  opacity: i < stepIndex ? 0.40 : 1,
                 }} />
             </div>
           ))}
         </div>
 
         {/* Content */}
-        <div className="flex-1 overflow-y-auto px-5 py-4">
+        <div className="px-4 pt-2 pb-5">
 
           {/* ── INTRO ── */}
           {step === "intro" && (
-            <div className="flex flex-col gap-5">
+            <>
               {authStatus?.authenticated ? (
-                <div className="flex flex-col gap-4">
-                  <div className="flex items-center gap-3 p-4 rounded-2xl"
-                    style={{ background: "hsl(271 91% 65% / 0.1)", border: "1px solid hsl(271 91% 65% / 0.2)" }}>
-                    <CheckCircle2 className="h-6 w-6 shrink-0" style={{ color: "hsl(271 91% 65%)" }} />
+                <div className="flex flex-col gap-3">
+                  <div className="flex items-center gap-3 px-3 py-2.5 rounded-2xl"
+                    style={{ background: "hsl(271 91% 65% / 0.10)", border: "1px solid hsl(271 91% 65% / 0.20)" }}>
+                    <CheckCircle2 className="h-5 w-5 shrink-0" style={{ color: "hsl(271 91% 65%)" }} />
                     <div>
                       <p className="font-display font-bold text-white text-sm">Акаунт підключено</p>
-                      <p className="text-xs mt-0.5" style={{ color: "hsl(258 15% 75%)" }}>
+                      <p className="text-xs mt-0.5" style={{ color: subColor }}>
                         {authStatus.firstName && `${authStatus.firstName} · `}
                         {authStatus.username ? `@${authStatus.username}` : authStatus.phone}
                       </p>
                     </div>
                   </div>
-                  <p className="text-sm leading-relaxed" style={{ color: "hsl(258 15% 75%)" }}>
-                    Ваш акаунт вже підключений. Можете відключити його або продовжити роботу.
+                  <p className="text-sm leading-relaxed px-1" style={{ color: subColor }}>
+                    Ваш акаунт підключений. Можете відключити або продовжити.
                   </p>
                   <button onClick={onSuccess}
                     className="w-full py-3.5 rounded-2xl font-display font-bold text-sm"
@@ -221,63 +224,55 @@ export function AuthModal({ onClose, onSuccess }: AuthModalProps) {
                   </button>
                   <button onClick={handleLogout} disabled={logout.isPending}
                     className="w-full py-3 rounded-2xl font-display font-semibold text-sm transition-colors"
-                    style={{ background: "rgba(255,255,255,0.05)", color: "hsl(0 85% 65%)", border: "1px solid hsl(0 60% 40% / 0.3)" }}>
+                    style={{ background: "rgba(255,255,255,0.05)", color: "hsl(0 85% 65%)", border: "1px solid hsl(0 60% 40% / 0.25)" }}>
                     {logout.isPending ? <Loader2 className="h-4 w-4 animate-spin mx-auto" /> : "Відключити акаунт"}
                   </button>
                 </div>
               ) : (
-                <div className="flex flex-col gap-3">
+                <div className="flex flex-col gap-2">
                   {[
                     { emoji: "🔐", title: "Що це?", desc: "GROUP AGENT використовує ваш Telegram акаунт для пошуку груп, автовступу та розсилок — без сторонніх сервісів." },
                     { emoji: "📱", title: "Що потрібно?", desc: "Лише номер телефону вашого Telegram. Код підтвердження надійде прямо в додаток." },
                     { emoji: "🛡️", title: "Безпечно?", desc: "Сесія зберігається на сервері. Ніхто, крім вас, не має доступу до акаунту." },
                     { emoji: "⚡", title: "Кому підходить?", desc: "Telegram Business або Premium акаунт — для масових дій без обмежень." },
                   ].map(({ emoji, title, desc }) => (
-                    <div key={title} className="flex items-start gap-3 px-3 py-2.5 rounded-2xl"
+                    <div key={title} className="flex items-start gap-3 px-3 py-2 rounded-2xl"
                       style={{ background: "rgba(255,255,255,0.04)" }}>
-                      <span className="text-lg shrink-0 leading-tight mt-0.5">{emoji}</span>
+                      <span className="text-base shrink-0 leading-snug mt-px">{emoji}</span>
                       <div>
-                        <p className="font-display font-bold text-white text-sm leading-tight">{title}</p>
-                        <p className="text-xs leading-relaxed mt-0.5" style={{ color: "hsl(258 15% 75%)" }}>{desc}</p>
+                        <p className="font-display font-bold text-white text-[13px] leading-tight">{title}</p>
+                        <p className="text-[12px] leading-relaxed mt-0.5" style={{ color: subColor }}>{desc}</p>
                       </div>
                     </div>
                   ))}
                   <button onClick={() => setStep("phone")}
-                    className="w-full py-3.5 rounded-2xl font-display font-bold text-sm flex items-center justify-center gap-2 mt-1"
+                    className="w-full py-3.5 rounded-2xl font-display font-bold text-sm flex items-center justify-center gap-2 mt-2"
                     style={convexBtn}>
                     <Smartphone className="h-4 w-4" /> Продовжити
                   </button>
                 </div>
               )}
-            </div>
+            </>
           )}
 
           {/* ── PHONE ── */}
           {step === "phone" && (
-            <div className="flex flex-col gap-5">
-              <div className="p-4 rounded-2xl"
-                style={{ background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.07)" }}>
-                <p className="text-sm leading-relaxed" style={{ color: "hsl(258 15% 78%)" }}>
-                  Введіть номер телефону у форматі <span className="font-mono text-white">+380XXXXXXXXX</span>.
-                  Telegram надішле вам код підтвердження у застосунок.
-                </p>
-              </div>
+            <div className="flex flex-col gap-4">
+              <p className="text-sm leading-relaxed" style={{ color: subColor }}>
+                Введіть номер у форматі <span className="text-white font-semibold">+380XXXXXXXXX</span>.
+                Telegram надішле код у застосунок.
+              </p>
               <form onSubmit={phoneForm.handleSubmit(onPhoneSubmit)} className="flex flex-col gap-3">
                 <div className="flex flex-col gap-1.5">
-                  <label className="text-xs font-display font-semibold uppercase tracking-widest"
-                    style={{ color: "hsl(258 15% 68%)" }}>
+                  <label className="text-[11px] font-display font-semibold uppercase tracking-[0.10em]"
+                    style={{ color: "hsl(258 15% 62%)" }}>
                     Номер телефону
                   </label>
-                  <input
-                    {...phoneForm.register("phone")}
+                  <input {...phoneForm.register("phone")}
                     placeholder="+380XXXXXXXXX"
-                    className="w-full px-4 py-3 rounded-xl text-sm text-white outline-none transition-all"
-                    style={{
-                      background: "rgba(255,255,255,0.06)",
-                      border: "1px solid rgba(255,255,255,0.12)",
-                    }}
-                    onFocus={(e) => e.currentTarget.style.borderColor = "hsl(271 91% 65% / 0.6)"}
-                    onBlur={(e) => e.currentTarget.style.borderColor = "rgba(255,255,255,0.12)"}
+                    className={inputCls}
+                    style={inputStyle}
+                    onFocus={inputFocus} onBlur={inputBlur}
                   />
                   {phoneForm.formState.errors.phone && (
                     <span className="text-xs" style={{ color: "hsl(0 85% 65%)" }}>
@@ -288,9 +283,7 @@ export function AuthModal({ onClose, onSuccess }: AuthModalProps) {
                 <button type="submit" disabled={sendCode.isPending}
                   className="w-full py-3.5 rounded-2xl font-display font-bold text-sm flex items-center justify-center gap-2"
                   style={convexBtn}>
-                  {sendCode.isPending
-                    ? <Loader2 className="h-4 w-4 animate-spin" />
-                    : <><ArrowRight className="h-4 w-4" /> Надіслати код</>}
+                  {sendCode.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : <><ArrowRight className="h-4 w-4" /> Надіслати код</>}
                 </button>
               </form>
             </div>
@@ -298,31 +291,23 @@ export function AuthModal({ onClose, onSuccess }: AuthModalProps) {
 
           {/* ── CODE ── */}
           {step === "code" && (
-            <div className="flex flex-col gap-5">
-              <div className="p-4 rounded-2xl"
-                style={{ background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.07)" }}>
-                <p className="text-sm leading-relaxed" style={{ color: "hsl(258 15% 78%)" }}>
-                  Код підтвердження надіслано на <span className="font-mono text-white">{phoneNumber}</span>.
-                  Відкрийте Telegram і введіть 5-значний код нижче.
-                </p>
-              </div>
+            <div className="flex flex-col gap-4">
+              <p className="text-sm leading-relaxed" style={{ color: subColor }}>
+                Код надіслано на <span className="text-white font-semibold">{phoneNumber}</span>.
+                Відкрийте Telegram і введіть 5-значний код.
+              </p>
               <form onSubmit={codeForm.handleSubmit(onCodeSubmit)} className="flex flex-col gap-3">
                 <div className="flex flex-col gap-1.5">
-                  <label className="text-xs font-display font-semibold uppercase tracking-widest"
-                    style={{ color: "hsl(258 15% 68%)" }}>
+                  <label className="text-[11px] font-display font-semibold uppercase tracking-[0.10em]"
+                    style={{ color: "hsl(258 15% 62%)" }}>
                     Код з Telegram
                   </label>
-                  <input
-                    {...codeForm.register("code")}
+                  <input {...codeForm.register("code")}
                     placeholder="12345"
                     maxLength={6}
-                    className="w-full px-4 py-3 rounded-xl font-mono text-lg text-white text-center outline-none tracking-[0.5em] transition-all"
-                    style={{
-                      background: "rgba(255,255,255,0.06)",
-                      border: "1px solid rgba(255,255,255,0.12)",
-                    }}
-                    onFocus={(e) => e.currentTarget.style.borderColor = "hsl(271 91% 65% / 0.6)"}
-                    onBlur={(e) => e.currentTarget.style.borderColor = "rgba(255,255,255,0.12)"}
+                    className={`${inputCls} font-mono text-lg text-center tracking-[0.5em]`}
+                    style={inputStyle}
+                    onFocus={inputFocus} onBlur={inputBlur}
                   />
                   {codeForm.formState.errors.code && (
                     <span className="text-xs" style={{ color: "hsl(0 85% 65%)" }}>
@@ -333,13 +318,11 @@ export function AuthModal({ onClose, onSuccess }: AuthModalProps) {
                 <button type="submit" disabled={verifyCode.isPending}
                   className="w-full py-3.5 rounded-2xl font-display font-bold text-sm flex items-center justify-center gap-2"
                   style={convexBtn}>
-                  {verifyCode.isPending
-                    ? <Loader2 className="h-4 w-4 animate-spin" />
-                    : <><CheckCircle2 className="h-4 w-4" /> Підтвердити</>}
+                  {verifyCode.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : <><CheckCircle2 className="h-4 w-4" /> Підтвердити</>}
                 </button>
                 <button type="button" onClick={() => setStep("phone")}
-                  className="text-center text-xs py-2 transition-colors"
-                  style={{ color: "hsl(258 15% 62%)" }}>
+                  className="text-center text-xs py-1.5 transition-colors"
+                  style={{ color: "hsl(258 15% 58%)" }}>
                   ← Змінити номер
                 </button>
               </form>
@@ -348,30 +331,22 @@ export function AuthModal({ onClose, onSuccess }: AuthModalProps) {
 
           {/* ── 2FA PASSWORD ── */}
           {step === "password" && (
-            <div className="flex flex-col gap-5">
-              <div className="p-4 rounded-2xl"
-                style={{ background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.07)" }}>
-                <p className="text-sm leading-relaxed" style={{ color: "hsl(258 15% 78%)" }}>
-                  На вашому акаунті увімкнена двофакторна авторизація (2FA). Введіть пароль, який ви встановили у Telegram → Налаштування → Конфіденційність.
-                </p>
-              </div>
+            <div className="flex flex-col gap-4">
+              <p className="text-sm leading-relaxed" style={{ color: subColor }}>
+                На акаунті увімкнена 2FA. Введіть пароль з Telegram → Налаштування → Конфіденційність.
+              </p>
               <form onSubmit={passwordForm.handleSubmit(onPasswordSubmit)} className="flex flex-col gap-3">
                 <div className="flex flex-col gap-1.5">
-                  <label className="text-xs font-display font-semibold uppercase tracking-widest"
-                    style={{ color: "hsl(258 15% 68%)" }}>
+                  <label className="text-[11px] font-display font-semibold uppercase tracking-[0.10em]"
+                    style={{ color: "hsl(258 15% 62%)" }}>
                     Пароль 2FA
                   </label>
-                  <input
-                    {...passwordForm.register("password")}
+                  <input {...passwordForm.register("password")}
                     type="password"
                     placeholder="Ваш пароль"
-                    className="w-full px-4 py-3 rounded-xl font-mono text-sm text-white outline-none transition-all"
-                    style={{
-                      background: "rgba(255,255,255,0.06)",
-                      border: "1px solid rgba(255,255,255,0.12)",
-                    }}
-                    onFocus={(e) => e.currentTarget.style.borderColor = "hsl(271 91% 65% / 0.6)"}
-                    onBlur={(e) => e.currentTarget.style.borderColor = "rgba(255,255,255,0.12)"}
+                    className={inputCls}
+                    style={inputStyle}
+                    onFocus={inputFocus} onBlur={inputBlur}
                   />
                   {passwordForm.formState.errors.password && (
                     <span className="text-xs" style={{ color: "hsl(0 85% 65%)" }}>
@@ -382,9 +357,7 @@ export function AuthModal({ onClose, onSuccess }: AuthModalProps) {
                 <button type="submit" disabled={verifyPassword.isPending}
                   className="w-full py-3.5 rounded-2xl font-display font-bold text-sm flex items-center justify-center gap-2"
                   style={convexBtn}>
-                  {verifyPassword.isPending
-                    ? <Loader2 className="h-4 w-4 animate-spin" />
-                    : <><ShieldCheck className="h-4 w-4" /> Підтвердити</>}
+                  {verifyPassword.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : <><ShieldCheck className="h-4 w-4" /> Підтвердити</>}
                 </button>
               </form>
             </div>
@@ -392,18 +365,18 @@ export function AuthModal({ onClose, onSuccess }: AuthModalProps) {
 
           {/* ── SUCCESS ── */}
           {step === "success" && (
-            <div className="flex flex-col items-center gap-5 py-4 text-center">
-              <div className="w-16 h-16 rounded-2xl flex items-center justify-center"
+            <div className="flex flex-col items-center gap-4 py-3 text-center">
+              <div className="w-14 h-14 rounded-2xl flex items-center justify-center"
                 style={{
                   background: "linear-gradient(135deg, hsl(271 91% 65%), hsl(316 90% 62%))",
-                  boxShadow: "0 0 30px hsl(271 91% 65% / 0.4)",
+                  boxShadow: "0 0 32px hsl(271 91% 65% / 0.40)",
                 }}>
-                <CheckCircle2 className="h-8 w-8 text-white" />
+                <CheckCircle2 className="h-7 w-7 text-white" />
               </div>
               <div>
                 <h3 className="font-display font-black text-xl text-white">Акаунт підключено!</h3>
-                <p className="text-sm mt-1" style={{ color: "hsl(258 15% 75%)" }}>
-                  Все готово. Тепер можна шукати групи та запускати розсилки.
+                <p className="text-sm mt-1" style={{ color: subColor }}>
+                  Все готово. Шукайте групи та запускайте розсилки.
                 </p>
               </div>
               <button onClick={onSuccess}
@@ -414,7 +387,6 @@ export function AuthModal({ onClose, onSuccess }: AuthModalProps) {
             </div>
           )}
         </div>
-
       </div>
     </div>
   );

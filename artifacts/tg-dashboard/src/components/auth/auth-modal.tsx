@@ -5,6 +5,7 @@ import * as z from "zod";
 import {
   Loader2, X, Smartphone, KeyRound, ShieldCheck, ArrowRight,
   CheckCircle2, Settings, Lock, ExternalLink, Hash, RotateCcw,
+  Globe, Clock,
 } from "lucide-react";
 import { TelegramIcon } from "@/components/ui/telegram-icon";
 import { useQueryClient } from "@tanstack/react-query";
@@ -461,14 +462,16 @@ export function AuthModal({ onClose, onSuccess }: AuthModalProps) {
           {step === "phone" && (
             <>
               <div className="flex flex-col gap-1.5">
-                {[
-                  { e: "🌍", t: "Міжнародний формат", s: "Починається з + та коду країни" },
-                  { e: "📱", t: "Код прийде в Telegram", s: "Або SMS якщо ви не в додатку" },
-                  { e: "⏱", t: "Код дійсний 5 хвилин", s: "Після — можна запросити новий" },
-                  { e: "🔒", t: "Номер захищено", s: "Використовується лише для входу" },
-                ].map(({ e, t, s }) => (
+                {([
+                  { icon: Globe,      t: "Міжнародний формат", s: "Починається з + та коду країни" },
+                  { icon: Smartphone, t: "Код прийде в Telegram", s: "Або SMS якщо ви не в додатку" },
+                  { icon: Clock,      t: "Код дійсний 5 хвилин", s: "Після — можна запросити новий" },
+                  { icon: Lock,       t: "Номер захищено", s: "Використовується лише для входу" },
+                ] as { icon: React.FC<any>; t: string; s: string }[]).map(({ icon: Icon, t, s }) => (
                   <div key={t} className="flex items-center gap-3 px-3 py-2 rounded-xl" style={card}>
-                    <span className="text-base shrink-0">{e}</span>
+                    <div className="w-7 h-7 rounded-lg flex items-center justify-center shrink-0" style={iconWrap}>
+                      <Icon style={{ color: PRI, width: 13, height: 13 }} />
+                    </div>
                     <div>
                       <p className="text-[12px] font-display font-bold text-white leading-tight">{t}</p>
                       <p className="text-[11px] mt-0.5" style={{ color: DIM }}>{s}</p>
@@ -477,10 +480,13 @@ export function AuthModal({ onClose, onSuccess }: AuthModalProps) {
                 ))}
               </div>
 
-              <div className="flex items-center gap-2 px-3 py-2 rounded-xl"
-                style={{ background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.06)" }}>
-                <span className="text-[11px] font-mono" style={{ color: DIM }}>Приклад:</span>
-                <span className="text-[14px] font-mono font-bold text-white">+380961234567</span>
+              <div className="flex items-center justify-between px-3 py-2.5 rounded-xl"
+                style={{
+                  background: "linear-gradient(135deg, hsl(271 91% 65% / 0.10), hsl(316 90% 62% / 0.06))",
+                  border: "1px solid hsl(271 91% 65% / 0.28)",
+                }}>
+                <span className="text-[11px] font-display font-semibold uppercase tracking-wider" style={{ color: "hsl(271 91% 65%)" }}>Приклад</span>
+                <span className="text-[14px] font-mono font-bold text-white tracking-wide">+380961234567</span>
               </div>
 
               <form onSubmit={phoneForm.handleSubmit(handleSendCode)} className="flex flex-col gap-3">

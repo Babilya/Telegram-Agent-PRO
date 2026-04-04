@@ -136,18 +136,21 @@ export default function Landing() {
       />
 
       {/* ── TOP: Logo only ── */}
-      <div className="relative z-20 shrink-0 px-5 pt-5 pb-2 max-w-lg mx-auto w-full">
-        <div className="flex items-center gap-2">
-          <div style={logoIcon}>
-            <TelegramIcon className="h-4 w-4 text-white" />
+      <div className="relative z-20 shrink-0 px-5 pt-4 pb-0 max-w-lg mx-auto w-full">
+        <div className="flex items-center gap-2.5">
+          <div style={{ ...logoIcon, width: 38, height: 38, borderRadius: 11 }}>
+            <TelegramIcon className="h-5 w-5 text-white" />
           </div>
-          <span className="font-display font-black text-lg" style={gradientText}>GROUP AGENT</span>
+          <span className="font-display font-black" style={{ fontSize: "clamp(1.15rem, 5.5vw, 1.45rem)" }}>
+            <span className="text-white">GROUP </span>
+            <span style={gradientText}>AGENT</span>
+          </span>
         </div>
       </div>
 
       {/* ── TEXT: Badge + heading + desc ── */}
-      <div className="relative z-10 shrink-0 px-5 pb-3 max-w-lg mx-auto w-full">
-        <div className="flex flex-col gap-1.5">
+      <div className="relative z-10 shrink-0 px-5 pt-3 pb-2 max-w-lg mx-auto w-full">
+        <div className="flex flex-col gap-1">
           <span
             className="text-xs font-display font-semibold tracking-widest uppercase"
             style={{ color: "hsl(316 90% 65%)" }}
@@ -156,14 +159,14 @@ export default function Landing() {
           </span>
           <h1
             className="font-display font-black leading-tight text-white"
-            style={{ fontSize: "clamp(1.6rem, 7.5vw, 2.4rem)" }}
+            style={{ fontSize: "clamp(1.45rem, 7vw, 2.2rem)" }}
           >
             {current.title}{" "}
             <span style={gradientText}>{current.accent}</span>
           </h1>
           <p
             className="leading-snug"
-            style={{ color: "hsl(258 10% 68%)", fontSize: "clamp(0.8rem, 3.5vw, 0.9rem)" }}
+            style={{ color: "hsl(258 10% 68%)", fontSize: "clamp(0.75rem, 3.2vw, 0.85rem)" }}
           >
             {current.desc}
           </p>

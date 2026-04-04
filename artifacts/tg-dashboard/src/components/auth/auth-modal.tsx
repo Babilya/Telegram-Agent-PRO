@@ -125,6 +125,7 @@ export function AuthModal({ onClose, onSuccess }: AuthModalProps) {
 
   const [step, setStep] = useState<Step | null>(null);
   const [hasCredentials, setHasCredentials] = useState(false);
+  const [configLoaded, setConfigLoaded] = useState(false);
   const [phone, setPhone] = useState("");
   const [phoneCodeHash, setPhoneCodeHash] = useState("");
   const [apiId, setApiId] = useState("");
@@ -143,16 +144,26 @@ export function AuthModal({ onClose, onSuccess }: AuthModalProps) {
       .then(r => r.json())
       .then((cfg: { hasCredentials: boolean }) => {
         setHasCredentials(cfg.hasCredentials);
-        setStep(cfg.hasCredentials ? "__check" as any : "prep");
+        setConfigLoaded(true);
+        if (!cfg.hasCredentials) setStep("prep");
       })
-      .catch(() => setStep("prep"));
+      .catch(() => { setConfigLoaded(true); setStep("prep"); });
   }, []);
 
   useEffect(() => {
-    if ((step as any) === "__check" && authStatus !== undefined) {
+    if (configLoaded && hasCredentials && authStatus !== undefined && step === null) {
       setStep(authStatus.authenticated ? "connected" : "phone");
     }
-  }, [step, authStatus]);
+  }, [configLoaded, hasCredentials, authStatus, step]);
+
+  useEffect(() => {
+    if (!configLoaded) return;
+    if (!hasCredentials) return;
+    const t = setTimeout(() => {
+      if (step === null) setStep("phone");
+    }, 4000);
+    return () => clearTimeout(t);
+  }, [configLoaded, hasCredentials, step]);
 
   const phoneForm = useForm<{ phone: string }>({
     resolver: zodResolver(z.object({ phone: z.string().min(7, "Введіть номер телефону") })),
@@ -234,8 +245,8 @@ export function AuthModal({ onClose, onSuccess }: AuthModalProps) {
 
   return (
     <div
-      className="fixed inset-0 z-50 flex items-end sm:items-center justify-center px-3 pb-4 sm:pb-0"
-      style={{ background: "rgba(5,3,14,0.20)", backdropFilter: "blur(10px)" }}
+      className="fixed inset-0 z-50 flex items-center justify-center px-4"
+      style={{ background: "rgba(5,3,14,0.55)", backdropFilter: "blur(12px)" }}
       onClick={(e) => e.target === e.currentTarget && onClose()}
     >
       <div

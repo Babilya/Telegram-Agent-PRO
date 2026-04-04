@@ -11,52 +11,42 @@ import Groups from "@/pages/groups";
 import Campaigns from "@/pages/campaigns";
 import CampaignForm from "@/pages/campaign-form";
 import Jobs from "@/pages/jobs";
+import Parsers from "@/pages/parsers";
+import Settings from "@/pages/settings";
 import NotFound from "@/pages/not-found";
 
 const queryClient = new QueryClient();
 
-const LANDING_KEY = "tgctrl_landing_seen";
-
 function Router() {
-  const hasSeenLanding = localStorage.getItem(LANDING_KEY) === "1";
-
   return (
     <Switch>
       <Route path="/welcome" component={Landing} />
       <Route path="/dashboard">
-        <Layout>
-          <Dashboard />
-        </Layout>
+        <Layout><Dashboard /></Layout>
       </Route>
       <Route path="/search">
-        <Layout>
-          <Search />
-        </Layout>
+        <Layout><Search /></Layout>
       </Route>
       <Route path="/groups">
-        <Layout>
-          <Groups />
-        </Layout>
+        <Layout><Groups /></Layout>
       </Route>
       <Route path="/campaigns/new">
-        <Layout>
-          <CampaignForm />
-        </Layout>
+        <Layout><CampaignForm /></Layout>
       </Route>
       <Route path="/campaigns/:id/edit">
-        <Layout>
-          <CampaignForm />
-        </Layout>
+        <Layout><CampaignForm /></Layout>
       </Route>
       <Route path="/campaigns">
-        <Layout>
-          <Campaigns />
-        </Layout>
+        <Layout><Campaigns /></Layout>
       </Route>
       <Route path="/jobs">
-        <Layout>
-          <Jobs />
-        </Layout>
+        <Layout><Jobs /></Layout>
+      </Route>
+      <Route path="/parsers">
+        <Layout><Parsers /></Layout>
+      </Route>
+      <Route path="/settings">
+        <Layout><Settings /></Layout>
       </Route>
       <Route path="/" component={Landing} />
       <Route component={NotFound} />

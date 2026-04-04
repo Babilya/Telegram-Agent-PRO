@@ -96,6 +96,9 @@ class StartCampaignRequest(BaseModel):
 class PauseCampaignRequest(BaseModel):
     campaignId: int
 
+class ImportGroupsRequest(BaseModel):
+    usernames: list[str]
+
 
 # ─── Auth ───────────────────────────────────────────────────────────────────────
 
@@ -404,6 +407,76 @@ async def send_campaign_broadcast(campaign: CampaignInfo):
 
     except Exception as e:
         logger.error(f"Broadcast task error: {e}")
+
+
+# ─── Parse Members ──────────────────────────────────────────────────────────────
+
+@app.get("/parse/members")
+async def parse_members(group_username: str, limit: int = 500):
+    try:
+        if not client.is_connected():
+            await client.connect()
+        if not await client.is_user_authorized():
+            return {"success": False, "message": "Not authenticated", "members": [], "total": 0}
+
+        entity = await client.get_entity(group_username)
+        participants = await client.get_participants(entity, limit=limit)
+
+        members = []
+        for p in participants:
+            members.append({
+                "id": p.id,
+                "username": p.username,
+                "firstName": p.first_name,
+                "lastName": p.last_name,
+                "phone": getattr(p, "phone", None),
+                "isBot": getattr(p, "bot", False),
+                "isPremium": getattr(p, "premium", False),
+            })
+
+        return {"success": True, "members": members, "total": len(members)}
+    except Exception as e:
+        logger.error(f"Parse members error: {e}")
+        return {"success": False, "message": str(e), "members": [], "total": 0}
+
+
+@app.post("/parse/import-groups")
+async def import_groups(req: ImportGroupsRequest):
+    try:
+        if not client.is_connected():
+            await client.connect()
+        if not await client.is_user_authorized():
+            return {"success": False, "message": "Not authenticated", "imported": [], "failed": []}
+
+        imported = []
+        failed = []
+
+        for raw in req.usernames:
+            username = raw.strip().lstrip("@").replace("https://t.me/", "").replace("http://t.me/", "")
+            if not username:
+                continue
+            try:
+                entity = await client.get_entity(username)
+                members_count = getattr(entity, "participants_count", None)
+                chat_type = "channel"
+                if hasattr(entity, "megagroup") and entity.megagroup:
+                    chat_type = "supergroup"
+                elif isinstance(entity, Chat):
+                    chat_type = "group"
+                imported.append({
+                    "telegramId": str(entity.id),
+                    "title": getattr(entity, "title", username),
+                    "username": getattr(entity, "username", None),
+                    "membersCount": members_count,
+                    "type": chat_type,
+                })
+            except Exception as e:
+                failed.append({"username": username, "error": str(e)})
+
+        return {"success": True, "imported": imported, "failed": failed}
+    except Exception as e:
+        logger.error(f"Import groups error: {e}")
+        return {"success": False, "message": str(e), "imported": [], "failed": []}
 
 
 # ─── Startup ────────────────────────────────────────────────────────────────────

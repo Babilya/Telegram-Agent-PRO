@@ -2,6 +2,7 @@ import { ReactNode } from "react";
 import { BottomNav } from "./bottom-nav";
 import { useHealthCheck, getHealthCheckQueryKey } from "@workspace/api-client-react";
 import { TelegramIcon } from "@/components/ui/telegram-icon";
+import { Settings } from "lucide-react";
 import { Link } from "wouter";
 
 export function Layout({ children }: { children: ReactNode }) {
@@ -41,11 +42,17 @@ export function Layout({ children }: { children: ReactNode }) {
           </span>
         </Link>
 
-        <div className="flex items-center gap-1.5 text-xs font-mono">
-          <div className={`h-1.5 w-1.5 rounded-full ${health?.status === "ok" ? "bg-primary animate-pulse" : "bg-destructive"}`} />
-          <span style={{ color: health?.status === "ok" ? "hsl(271 91% 65%)" : "hsl(0 85% 60%)" }}>
-            {health?.status === "ok" ? "ONLINE" : "OFFLINE"}
-          </span>
+        <div className="flex items-center gap-3">
+          <div className="flex items-center gap-1.5 text-xs font-mono">
+            <div className={`h-1.5 w-1.5 rounded-full ${health?.status === "ok" ? "bg-primary animate-pulse" : "bg-destructive"}`} />
+            <span style={{ color: health?.status === "ok" ? "hsl(271 91% 65%)" : "hsl(0 85% 60%)" }}>
+              {health?.status === "ok" ? "ONLINE" : "OFFLINE"}
+            </span>
+          </div>
+          <Link href="/settings" className="w-8 h-8 rounded-xl flex items-center justify-center transition-colors hover:bg-white/8"
+            style={{ color: "hsl(258 10% 50%)" }}>
+            <Settings style={{ width: 16, height: 16 }} />
+          </Link>
         </div>
       </header>
 

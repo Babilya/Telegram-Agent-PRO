@@ -460,9 +460,22 @@ export function AuthModal({ onClose, onSuccess }: AuthModalProps) {
           {/* ══ НОМЕР ТЕЛЕФОНУ ══ */}
           {step === "phone" && (
             <>
-              <p className="text-[13px] leading-relaxed px-0.5" style={{ color: SUB }}>
-                Введіть номер у <span className="text-white font-medium">міжнародному форматі</span> — без пробілів і дужок. Telegram надішле код підтвердження в додаток або SMS.
-              </p>
+              <div className="flex flex-col gap-1.5">
+                {[
+                  { e: "🌍", t: "Міжнародний формат", s: "Починається з + та коду країни" },
+                  { e: "📱", t: "Код прийде в Telegram", s: "Або SMS якщо ви не в додатку" },
+                  { e: "⏱", t: "Код дійсний 5 хвилин", s: "Після — можна запросити новий" },
+                  { e: "🔒", t: "Номер захищено", s: "Використовується лише для входу" },
+                ].map(({ e, t, s }) => (
+                  <div key={t} className="flex items-center gap-3 px-3 py-2 rounded-xl" style={card}>
+                    <span className="text-base shrink-0">{e}</span>
+                    <div>
+                      <p className="text-[12px] font-display font-bold text-white leading-tight">{t}</p>
+                      <p className="text-[11px] mt-0.5" style={{ color: DIM }}>{s}</p>
+                    </div>
+                  </div>
+                ))}
+              </div>
 
               <div className="flex items-center gap-2 px-3 py-2 rounded-xl"
                 style={{ background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.06)" }}>

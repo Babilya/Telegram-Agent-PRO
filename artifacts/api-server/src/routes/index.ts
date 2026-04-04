@@ -7,6 +7,7 @@ import campaignsRouter from "./campaigns";
 import jobsRouter from "./jobs";
 import statsRouter from "./stats";
 import parseRouter from "./parse";
+import contactsRouter from "./contacts";
 
 const router: IRouter = Router();
 
@@ -18,5 +19,6 @@ router.use(campaignsRouter);
 router.use(jobsRouter);
 router.use(statsRouter);
 router.use(parseRouter);
+router.use(contactsRouter);
 
 export default router;

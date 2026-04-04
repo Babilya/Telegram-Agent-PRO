@@ -23,13 +23,13 @@ router.get("/groups", async (req, res) => {
 router.post("/groups", async (req, res) => {
   try {
     const { telegramId, title, username, membersCount, type } = req.body;
-    const existing = await db.select().from(groupsTable).where(eq(groupsTable.telegramId, telegramId));
+    const existing = await db.select().from(groupsTable).where(eq(groupsTable.telegramId, String(telegramId)));
     if (existing.length > 0) {
       res.json(existing[0]);
       return;
     }
     const [group] = await db.insert(groupsTable).values({
-      telegramId,
+      telegramId: String(telegramId),
       title,
       username: username ?? null,
       membersCount: membersCount ?? null,
@@ -40,6 +40,24 @@ router.post("/groups", async (req, res) => {
   } catch (err) {
     req.log.error({ err }, "Save group error");
     res.status(500).json({ error: "Failed to save group" });
+  }
+});
+
+router.put("/groups/:id", async (req, res) => {
+  try {
+    const id = parseInt(req.params["id"]!);
+    const { title, username, membersCount, type, status } = req.body;
+    const update: Record<string, unknown> = {};
+    if (title !== undefined) update["title"] = title;
+    if (username !== undefined) update["username"] = username;
+    if (membersCount !== undefined) update["membersCount"] = membersCount;
+    if (type !== undefined) update["type"] = type;
+    if (status !== undefined) update["status"] = status;
+    const [group] = await db.update(groupsTable).set(update).where(eq(groupsTable.id, id)).returning();
+    res.json(group);
+  } catch (err) {
+    req.log.error({ err }, "Update group error");
+    res.status(500).json({ error: "Failed to update group" });
   }
 });
 
@@ -61,23 +79,43 @@ router.post("/groups/join", async (req, res) => {
     const groups = await db.select().from(groupsTable);
     const targetGroups = groups.filter(g => groupIds.includes(g.id));
 
-    const response = await fetch(`${PYTHON_SERVICE_URL}/groups/join`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        groups: targetGroups.map(g => ({ id: g.id, telegramId: g.telegramId, username: g.username, title: g.title })),
-        delaySeconds,
-      }),
-    });
-    const data = await response.json();
-
+    // Mark all as pending immediately
     for (const gid of groupIds) {
       await db.update(groupsTable)
         .set({ status: "pending" })
         .where(eq(groupsTable.id, gid));
     }
 
-    res.json(data);
+    // Create job records for each group
+    const jobRecords = await db.insert(jobsTable)
+      .values(targetGroups.map(g => ({
+        type: "join",
+        status: "pending",
+        groupId: g.id,
+        targetId: g.username ? `@${g.username}` : g.telegramId,
+        message: `Вступ до "${g.title}"`,
+      })))
+      .returning();
+
+    try {
+      const response = await fetch(`${PYTHON_SERVICE_URL}/groups/join`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          groups: targetGroups.map(g => ({
+            id: g.id,
+            telegramId: g.telegramId,
+            username: g.username,
+            title: g.title,
+          })),
+          delaySeconds,
+        }),
+      });
+      const data = await response.json();
+      res.json({ ...data, jobIds: jobRecords.map(j => j.id) });
+    } catch (_) {
+      res.json({ success: false, message: "Bot service not available. Groups marked as pending.", jobIds: jobRecords.map(j => j.id) });
+    }
   } catch (err) {
     req.log.error({ err }, "Join groups error");
     res.status(500).json({ success: false, message: "Failed to start join job" });
@@ -86,8 +124,19 @@ router.post("/groups/join", async (req, res) => {
 
 router.put("/groups/join-status", async (req, res) => {
   try {
-    const { id, status } = req.body;
+    const { id, status, error } = req.body;
     await db.update(groupsTable).set({ status }).where(eq(groupsTable.id, id));
+
+    // Create or update job record when Python calls back
+    await db.insert(jobsTable).values({
+      type: "join",
+      status: status === "joined" ? "completed" : "failed",
+      groupId: id,
+      message: status === "joined" ? "Успішно вступлено" : "Помилка вступу",
+      error: error ?? null,
+      completedAt: new Date(),
+    });
+
     res.json({ success: true });
   } catch (err) {
     req.log.error({ err }, "Update group status error");

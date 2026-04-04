@@ -1,6 +1,6 @@
 """
 Telegram Bot Service — FastAPI + Telethon
-Handles: auth, group search, auto-join, broadcast campaigns
+Handles: auth, group search, auto-join, broadcast campaigns, member parsing
 """
 
 import asyncio
@@ -74,7 +74,7 @@ class VerifyPasswordRequest(BaseModel):
 class GroupInfo(BaseModel):
     id: int
     telegramId: str
-    username: Optional[str]
+    username: Optional[str] = None
     title: str
 
 class JoinGroupsRequest(BaseModel):
@@ -87,8 +87,9 @@ class CampaignInfo(BaseModel):
     message: str
     status: str
     scheduleType: str
-    intervalHours: Optional[float]
+    intervalHours: Optional[float] = None
     targetGroupIds: list[int]
+    delaySeconds: int = 5
 
 class StartCampaignRequest(BaseModel):
     campaign: CampaignInfo
@@ -114,10 +115,11 @@ async def auth_status():
                 "phone": me.phone if me else None,
                 "username": me.username if me else None,
                 "firstName": me.first_name if me else None,
+                "id": me.id if me else None,
             }
     except Exception as e:
         logger.error(f"Auth status error: {e}")
-    return {"authenticated": False, "phone": None, "username": None, "firstName": None}
+    return {"authenticated": False, "phone": None, "username": None, "firstName": None, "id": None}
 
 
 @app.post("/auth/send-code")
@@ -157,7 +159,9 @@ async def verify_password(req: VerifyPasswordRequest):
         if not client.is_connected():
             await client.connect()
         await client.sign_in(password=req.password)
-        return {"success": True, "message": "Authenticated", "authenticated": True}
+        me = await client.get_me()
+        return {"success": True, "message": "Authenticated", "authenticated": True,
+                "phone": me.phone if me else None, "username": me.username if me else None}
     except Exception as e:
         logger.error(f"Verify password error: {e}")
         return {"success": False, "message": str(e)}
@@ -254,6 +258,7 @@ async def join_groups(req: JoinGroupsRequest, background_tasks: BackgroundTasks)
 
 
 async def do_join_groups(groups: list[GroupInfo], delay_seconds: int):
+    import httpx
     try:
         if not client.is_connected():
             await client.connect()
@@ -261,32 +266,50 @@ async def do_join_groups(groups: list[GroupInfo], delay_seconds: int):
             logger.error("Not authenticated, cannot join groups")
             return
 
-        import httpx
-        async with httpx.AsyncClient() as http:
+        async with httpx.AsyncClient(timeout=10.0) as http:
             for group in groups:
+                status = "failed"
+                error_msg = None
                 try:
                     if group.username:
                         entity = await client.get_entity(group.username)
                         await client(JoinChannelRequest(entity))
                         status = "joined"
                         logger.info(f"Joined {group.title}")
+                    elif group.telegramId:
+                        try:
+                            entity = await client.get_entity(int(group.telegramId))
+                            await client(JoinChannelRequest(entity))
+                            status = "joined"
+                            logger.info(f"Joined {group.title} by ID")
+                        except Exception as e:
+                            error_msg = f"Cannot resolve by ID: {e}"
+                            logger.warning(f"No username for {group.title}, trying ID failed: {e}")
                     else:
-                        logger.warning(f"No username for group {group.title}, skipping")
-                        status = "failed"
-
-                    await http.put(
-                        f"{NODE_API_URL}/api/groups/join-status",
-                        json={"id": group.id, "status": status}
-                    )
+                        error_msg = "No username or ID available"
+                        logger.warning(f"No username or ID for group {group.title}, skipping")
 
                 except UserAlreadyParticipantError:
                     logger.info(f"Already in {group.title}")
                     status = "joined"
                 except FloodWaitError as e:
-                    logger.warning(f"Flood wait {e.seconds}s")
+                    logger.warning(f"Flood wait {e.seconds}s for {group.title}")
                     await asyncio.sleep(e.seconds)
+                    error_msg = f"Flood wait: {e.seconds}s"
+                except ChannelPrivateError:
+                    error_msg = "Приватний канал — потрібне запрошення"
                 except Exception as e:
                     logger.error(f"Failed to join {group.title}: {e}")
+                    error_msg = str(e)
+
+                # Notify Node API of the result
+                try:
+                    await http.put(
+                        f"{NODE_API_URL}/api/groups/join-status",
+                        json={"id": group.id, "status": status, "error": error_msg}
+                    )
+                except Exception as e:
+                    logger.warning(f"Failed to update join status for {group.title}: {e}")
 
                 await asyncio.sleep(delay_seconds)
 
@@ -345,6 +368,7 @@ async def pause_campaign(req: PauseCampaignRequest):
 
 
 async def send_campaign_broadcast(campaign: CampaignInfo):
+    import httpx
     try:
         if not client.is_connected():
             await client.connect()
@@ -352,8 +376,7 @@ async def send_campaign_broadcast(campaign: CampaignInfo):
             logger.error("Not authenticated for broadcast")
             return
 
-        import httpx
-        async with httpx.AsyncClient() as http:
+        async with httpx.AsyncClient(timeout=10.0) as http:
             groups_resp = await http.get(f"{NODE_API_URL}/api/groups")
             groups_data = groups_resp.json()
             all_groups = groups_data.get("groups", [])
@@ -361,6 +384,8 @@ async def send_campaign_broadcast(campaign: CampaignInfo):
         target_groups = [g for g in all_groups if g["id"] in campaign.targetGroupIds]
         sent = 0
         failed = 0
+
+        delay = max(1, campaign.delaySeconds)
 
         for group in target_groups:
             try:
@@ -382,8 +407,8 @@ async def send_campaign_broadcast(campaign: CampaignInfo):
 
                 await client.send_message(entity, campaign.message)
                 sent += 1
-                logger.info(f"Sent to {group.get('title')}")
-                await asyncio.sleep(3)
+                logger.info(f"[Campaign {campaign.id}] Sent to {group.get('title')}")
+                await asyncio.sleep(delay)
 
             except ChatWriteForbiddenError:
                 logger.warning(f"Cannot write to {group.get('title')}")
@@ -396,8 +421,9 @@ async def send_campaign_broadcast(campaign: CampaignInfo):
                 logger.error(f"Broadcast error for {group.get('title')}: {e}")
                 failed += 1
 
+        # Notify Node of completion
         import httpx
-        async with httpx.AsyncClient() as http:
+        async with httpx.AsyncClient(timeout=10.0) as http:
             await http.post(
                 f"{NODE_API_URL}/api/campaigns/{campaign.id}/broadcast-done",
                 json={"sent": sent, "failed": failed}
@@ -440,6 +466,48 @@ async def parse_members(group_username: str, limit: int = 500):
         return {"success": False, "message": str(e), "members": [], "total": 0}
 
 
+@app.get("/parse/dialogs")
+async def get_dialogs(limit: int = 200):
+    try:
+        if not client.is_connected():
+            await client.connect()
+        if not await client.is_user_authorized():
+            return {"success": False, "message": "Not authenticated", "dialogs": []}
+
+        dialogs = await client.get_dialogs(limit=limit)
+        result = []
+
+        for dialog in dialogs:
+            entity = dialog.entity
+            if not isinstance(entity, (Channel, Chat)):
+                continue
+            if isinstance(entity, ChannelForbidden) or isinstance(entity, ChatForbidden):
+                continue
+
+            members_count = getattr(entity, "participants_count", None)
+            chat_type = "channel"
+            if hasattr(entity, "megagroup") and entity.megagroup:
+                chat_type = "supergroup"
+            elif isinstance(entity, Chat):
+                chat_type = "group"
+
+            username = getattr(entity, "username", None)
+            result.append({
+                "telegramId": str(entity.id),
+                "title": getattr(entity, "title", "Unknown"),
+                "username": username,
+                "membersCount": members_count,
+                "type": chat_type,
+                "identifier": username if username else str(entity.id),
+            })
+
+        return {"success": True, "dialogs": result, "total": len(result)}
+
+    except Exception as e:
+        logger.error(f"Get dialogs error: {e}")
+        return {"success": False, "message": str(e), "dialogs": []}
+
+
 @app.post("/parse/import-groups")
 async def import_groups(req: ImportGroupsRequest):
     try:
@@ -452,7 +520,9 @@ async def import_groups(req: ImportGroupsRequest):
         failed = []
 
         for raw in req.usernames:
-            username = raw.strip().lstrip("@").replace("https://t.me/", "").replace("http://t.me/", "")
+            username = raw.strip()
+            username = username.replace("https://t.me/", "").replace("http://t.me/", "")
+            username = username.lstrip("@")
             if not username:
                 continue
             try:

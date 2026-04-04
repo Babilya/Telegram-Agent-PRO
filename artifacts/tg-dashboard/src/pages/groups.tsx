@@ -92,7 +92,7 @@ export default function Groups() {
     <div className="space-y-6">
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-          <h1 className="text-3xl font-bold font-mono tracking-tight">Saved Targets</h1>
+          <h1 className="text-3xl font-display font-black tracking-tight text-gradient">Saved Targets</h1>
           <p className="text-muted-foreground">Manage your inventory of target groups.</p>
         </div>
         

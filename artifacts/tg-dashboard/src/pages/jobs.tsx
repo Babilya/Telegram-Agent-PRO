@@ -28,7 +28,7 @@ export default function Jobs() {
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-3xl font-bold font-mono tracking-tight">Job History</h1>
+        <h1 className="text-3xl font-display font-black tracking-tight text-gradient">Job History</h1>
         <p className="text-muted-foreground">System execution logs for joins and broadcasts.</p>
       </div>
 

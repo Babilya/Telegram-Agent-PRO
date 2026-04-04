@@ -1,6 +1,6 @@
 import { useState, useRef, useCallback, useEffect } from "react";
 import { useLocation } from "wouter";
-import { Upload, Search, Users, Megaphone, Clock, Zap, Shield, ChevronDown } from "lucide-react";
+import { Upload, Search, Users, Megaphone, Clock, Zap, Shield } from "lucide-react";
 import logoImg from "@assets/IMG_9715_1775279307639.png";
 
 const IMAGE_KEY = "tgctrl_hero_image";
@@ -177,14 +177,36 @@ export default function Landing() {
           data-testid="image-input"
         />
 
-        {/* Scroll hint */}
-        <button
-          onClick={() => scrollToPage(1)}
-          className="z-10 flex flex-col items-center gap-1.5 text-muted-foreground hover:text-foreground transition-colors"
-        >
-          <span className="text-xs font-display font-semibold tracking-widest uppercase">Далі</span>
-          <ChevronDown className="h-5 w-5 animate-bounce" />
-        </button>
+        {/* CTA page 1 */}
+        <div className="z-10 flex flex-col gap-4 w-full max-w-xs">
+          <button
+            onClick={() => scrollToPage(1)}
+            className="w-full py-4 px-6 rounded-2xl text-base font-display font-bold tracking-wide"
+            style={{
+              background: "linear-gradient(135deg, hsl(271 91% 65%), hsl(316 90% 62%))",
+              color: "white",
+              boxShadow: "0 0 30px hsl(271 91% 65% / 0.5), 0 0 60px hsl(316 90% 62% / 0.2)",
+            }}
+          >
+            ДАЛІ
+          </button>
+          {/* Dots */}
+          <div className="flex justify-center gap-2">
+            {[0, 1, 2].map((i) => (
+              <button
+                key={i}
+                onClick={() => scrollToPage(i)}
+                className="h-1.5 rounded-full transition-all duration-300"
+                style={{
+                  width: activePage === i ? 24 : 6,
+                  background: activePage === i
+                    ? "linear-gradient(90deg, hsl(271 91% 65%), hsl(316 90% 62%))"
+                    : "hsl(258 30% 30%)",
+                }}
+              />
+            ))}
+          </div>
+        </div>
       </div>
 
       {/* ────────────── PAGE 2 : Welcome ────────────── */}
@@ -242,14 +264,36 @@ export default function Landing() {
           </div>
         </div>
 
-        {/* Scroll hint */}
-        <button
-          onClick={() => scrollToPage(2)}
-          className="z-10 flex flex-col items-center gap-1.5 text-muted-foreground hover:text-foreground transition-colors mx-auto"
-        >
-          <span className="text-xs font-display font-semibold tracking-widest uppercase">Далі</span>
-          <ChevronDown className="h-5 w-5 animate-bounce" />
-        </button>
+        {/* CTA page 2 */}
+        <div className="flex flex-col gap-4 max-w-lg mx-auto w-full">
+          <button
+            onClick={() => scrollToPage(2)}
+            className="w-full py-4 px-6 rounded-2xl text-base font-display font-bold tracking-wide"
+            style={{
+              background: "linear-gradient(135deg, hsl(271 91% 65%), hsl(316 90% 62%))",
+              color: "white",
+              boxShadow: "0 0 30px hsl(271 91% 65% / 0.5), 0 0 60px hsl(316 90% 62% / 0.2)",
+            }}
+          >
+            ДАЛІ
+          </button>
+          {/* Dots */}
+          <div className="flex justify-center gap-2">
+            {[0, 1, 2].map((i) => (
+              <button
+                key={i}
+                onClick={() => scrollToPage(i)}
+                className="h-1.5 rounded-full transition-all duration-300"
+                style={{
+                  width: activePage === i ? 24 : 6,
+                  background: activePage === i
+                    ? "linear-gradient(90deg, hsl(271 91% 65%), hsl(316 90% 62%))"
+                    : "hsl(258 30% 30%)",
+                }}
+              />
+            ))}
+          </div>
+        </div>
       </div>
 
       {/* ────────────── PAGE 3 : How it works + CTA ────────────── */}
@@ -321,7 +365,7 @@ export default function Landing() {
         <div className="flex flex-col gap-5 max-w-lg mx-auto w-full">
           <button
             onClick={() => setLocation("/dashboard")}
-            className="w-full py-4 px-6 rounded-2xl text-base font-display font-bold tracking-wide flex items-center justify-center gap-2"
+            className="w-full py-4 px-6 rounded-2xl text-base font-display font-bold tracking-wide"
             style={{
               background: "linear-gradient(135deg, hsl(271 91% 65%), hsl(316 90% 62%))",
               color: "white",
@@ -329,8 +373,7 @@ export default function Landing() {
             }}
             data-testid="start-button"
           >
-            <Zap className="h-5 w-5" />
-            ПОЧАТИ
+            АВТОРИЗУВАТИСЯ
           </button>
 
           {/* Page dots */}

@@ -1,11 +1,15 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import {
   Loader2, Users, Download, Bug, Search, Crown, Bot,
-  Bookmark, BookmarkCheck, Trash2, RefreshCw, Radio,
+  Bookmark, BookmarkCheck, Trash2, RefreshCw, ChevronDown,
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import {
+  AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
+  AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 
 interface Member {
   id: number;
@@ -39,6 +43,8 @@ interface SavedContact {
   createdAt: string;
 }
 
+const PAGE_SIZE = 200;
+
 const inputCls = "w-full px-3 py-2.5 rounded-xl text-sm text-white bg-white/5 border border-white/10 focus:border-[hsl(271_91%_65%/0.5)] focus:outline-none transition-colors placeholder:text-white/30";
 const PRI = "hsl(271 91% 65%)";
 
@@ -64,9 +70,13 @@ export default function Parsers() {
 
   // ── Contacts tab state ──
   const [contacts, setContacts] = useState<SavedContact[]>([]);
+  const [contactsTotal, setContactsTotal] = useState(0);
+  const [contactsOffset, setContactsOffset] = useState(0);
   const [isLoadingContacts, setIsLoadingContacts] = useState(false);
+  const [isLoadingMore, setIsLoadingMore] = useState(false);
   const [contactsFilter, setContactsFilter] = useState("");
   const [isDeletingAll, setIsDeletingAll] = useState(false);
+  const [showDeleteDialog, setShowDeleteDialog] = useState(false);
 
   // Load dialogs on mount
   useEffect(() => {
@@ -75,7 +85,11 @@ export default function Parsers() {
 
   // Load contacts when switching to contacts tab
   useEffect(() => {
-    if (activeTab === "contacts") fetchContacts();
+    if (activeTab === "contacts") {
+      setContacts([]);
+      setContactsOffset(0);
+      fetchContacts(0, true);
+    }
   }, [activeTab]);
 
   const fetchDialogs = async () => {
@@ -92,17 +106,30 @@ export default function Parsers() {
     }
   };
 
-  const fetchContacts = async () => {
-    setIsLoadingContacts(true);
+  const fetchContacts = useCallback(async (offset = 0, replace = false) => {
+    if (replace) setIsLoadingContacts(true);
+    else setIsLoadingMore(true);
     try {
-      const res = await fetch("/api/contacts");
+      const params = new URLSearchParams({ limit: String(PAGE_SIZE), offset: String(offset) });
+      if (contactsFilter) params.set("search", contactsFilter);
+      const res = await fetch(`/api/contacts?${params}`);
       const data = await res.json();
-      setContacts(data.contacts ?? []);
+      const incoming: SavedContact[] = data.contacts ?? [];
+      setContactsTotal(data.total ?? 0);
+      setContactsOffset(offset + incoming.length);
+      setContacts(prev => replace ? incoming : [...prev, ...incoming]);
     } catch {
-      setContacts([]);
+      if (replace) setContacts([]);
     } finally {
       setIsLoadingContacts(false);
+      setIsLoadingMore(false);
     }
+  }, [contactsFilter]);
+
+  const handleContactsSearch = () => {
+    setContacts([]);
+    setContactsOffset(0);
+    fetchContacts(0, true);
   };
 
   const handleParse = async () => {
@@ -191,16 +218,18 @@ export default function Parsers() {
   };
 
   const handleDeleteAllContacts = async () => {
-    if (!confirm("Видалити всі збережені контакти?")) return;
     setIsDeletingAll(true);
     try {
       await fetch("/api/contacts/all", { method: "DELETE" });
       setContacts([]);
+      setContactsTotal(0);
+      setContactsOffset(0);
       toast({ title: "Всі контакти видалено" });
     } catch {
       toast({ title: "Помилка видалення", variant: "destructive" });
     } finally {
       setIsDeletingAll(false);
+      setShowDeleteDialog(false);
     }
   };
 
@@ -217,17 +246,7 @@ export default function Parsers() {
       })
     : null;
 
-  const filteredContacts = contacts.filter(c => {
-    if (!contactsFilter) return true;
-    const q = contactsFilter.toLowerCase();
-    return (
-      c.username?.toLowerCase().includes(q) ||
-      c.firstName?.toLowerCase().includes(q) ||
-      c.lastName?.toLowerCase().includes(q) ||
-      c.phone?.includes(q) ||
-      c.sourceGroup?.toLowerCase().includes(q)
-    );
-  });
+  const hasMoreContacts = contacts.length < contactsTotal;
 
   return (
     <div className="flex flex-col gap-4 pb-2">
@@ -238,7 +257,7 @@ export default function Parsers() {
 
       {/* Tabs */}
       <div className="flex gap-1 p-1 rounded-xl bg-white/5 border border-white/8">
-        {([["parse", <Bug className="h-3.5 w-3.5" />, "Парсинг"], ["contacts", <Bookmark className="h-3.5 w-3.5" />, `Контакти${contacts.length ? ` (${contacts.length})` : ""}`]] as [TabT, any, string][]).map(([id, icon, label]) => (
+        {([["parse", <Bug className="h-3.5 w-3.5" />, "Парсинг"], ["contacts", <Bookmark className="h-3.5 w-3.5" />, `Контакти${contactsTotal ? ` (${contactsTotal})` : contacts.length ? ` (${contacts.length})` : ""}`]] as [TabT, any, string][]).map(([id, icon, label]) => (
           <button
             key={id}
             onClick={() => setActiveTab(id)}
@@ -397,10 +416,10 @@ export default function Parsers() {
         <>
           <div className="flex items-center justify-between gap-2">
             <p className="text-sm font-display font-bold text-white">
-              Збережені контакти <span className="text-primary font-mono">({contacts.length})</span>
+              Збережені контакти{contactsTotal > 0 && <span className="text-primary font-mono"> ({contactsTotal})</span>}
             </p>
             <div className="flex gap-2">
-              <Button variant="ghost" size="icon" className="h-8 w-8" onClick={fetchContacts}>
+              <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => { setContacts([]); setContactsOffset(0); fetchContacts(0, true); }}>
                 <RefreshCw className={`h-3.5 w-3.5 ${isLoadingContacts ? "animate-spin" : ""}`} />
               </Button>
               {contacts.length > 0 && (
@@ -410,7 +429,7 @@ export default function Parsers() {
                   </Button>
                   <Button variant="outline" size="sm"
                     className="border-destructive/30 text-destructive hover:bg-destructive/10"
-                    onClick={handleDeleteAllContacts} disabled={isDeletingAll}>
+                    onClick={() => setShowDeleteDialog(true)} disabled={isDeletingAll}>
                     {isDeletingAll
                       ? <Loader2 className="h-3.5 w-3.5 animate-spin" />
                       : <Trash2 className="h-3.5 w-3.5" />}
@@ -420,39 +439,84 @@ export default function Parsers() {
             </div>
           </div>
 
-          <div className="relative">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground pointer-events-none" />
-            <input
-              className={`${inputCls} pl-9`}
-              placeholder="Пошук за ім'ям, @username, групою…"
-              value={contactsFilter}
-              onChange={e => setContactsFilter(e.target.value)}
-            />
+          <div className="flex gap-2">
+            <div className="relative flex-1">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground pointer-events-none" />
+              <input
+                className={`${inputCls} pl-9`}
+                placeholder="Пошук за ім'ям, @username, групою…"
+                value={contactsFilter}
+                onChange={e => setContactsFilter(e.target.value)}
+                onKeyDown={e => e.key === "Enter" && handleContactsSearch()}
+              />
+            </div>
+            <Button variant="outline" size="sm" onClick={handleContactsSearch} className="h-[42px] shrink-0">
+              <Search className="h-3.5 w-3.5" />
+            </Button>
           </div>
 
           {isLoadingContacts ? (
             <div className="flex justify-center py-12">
               <Loader2 className="h-6 w-6 animate-spin text-primary" />
             </div>
-          ) : filteredContacts.length === 0 ? (
+          ) : contacts.length === 0 ? (
             <div className="rounded-2xl border border-border/50 bg-secondary/20 py-12 text-center text-muted-foreground text-sm">
-              {contacts.length === 0
+              {contactsTotal === 0
                 ? "Збережених контактів немає. Запарсіть групу і натисніть «Зберегти»."
                 : "Нічого не знайдено за вашим запитом."}
             </div>
           ) : (
-            <div className="flex flex-col gap-1.5">
-              {filteredContacts.map(c => (
-                <MemberRow
-                  key={c.id}
-                  member={{ id: parseInt(c.telegramId) || 0, ...c }}
-                  badge={c.sourceGroup ?? undefined}
-                />
-              ))}
-            </div>
+            <>
+              <div className="flex flex-col gap-1.5">
+                {contacts.map(c => (
+                  <MemberRow
+                    key={c.id}
+                    member={{ id: parseInt(c.telegramId) || 0, ...c }}
+                    badge={c.sourceGroup ?? undefined}
+                  />
+                ))}
+              </div>
+
+              {hasMoreContacts && (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="self-center mt-1"
+                  onClick={() => fetchContacts(contactsOffset)}
+                  disabled={isLoadingMore}
+                >
+                  {isLoadingMore
+                    ? <Loader2 className="h-3.5 w-3.5 mr-1.5 animate-spin" />
+                    : <ChevronDown className="h-3.5 w-3.5 mr-1.5" />}
+                  Завантажити ще ({contactsTotal - contacts.length})
+                </Button>
+              )}
+            </>
           )}
         </>
       )}
+
+      {/* Delete all confirmation dialog */}
+      <AlertDialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Видалити всі контакти?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Ця дія незворотна. Всі {contactsTotal} збережених контактів будуть видалені назавжди.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Скасувати</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleDeleteAllContacts}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              {isDeletingAll ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : null}
+              Видалити всі
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }

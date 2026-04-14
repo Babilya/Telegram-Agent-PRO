@@ -6,7 +6,6 @@ Handles: auth, group search, auto-join, broadcast campaigns, member parsing
 import asyncio
 import logging
 import os
-import secrets
 from contextlib import asynccontextmanager
 from datetime import datetime
 from typing import Optional
@@ -40,7 +39,8 @@ SESSION_FILE = "telegram-bot/session/user_session"
 NODE_API_URL = os.environ.get("NODE_API_URL", "http://localhost:8080")
 
 # Internal API key — shared secret between Node and Python services
-INTERNAL_API_KEY = os.environ.get("INTERNAL_API_KEY", secrets.token_hex(32))
+# Empty string = auth disabled (dev mode); set the env var in production
+INTERNAL_API_KEY = os.environ.get("INTERNAL_API_KEY", "")
 
 os.makedirs("telegram-bot/session", exist_ok=True)
 

@@ -2,9 +2,12 @@ import { Router } from "express";
 import { db } from "@workspace/db";
 import { groupsTable } from "@workspace/db";
 import { eq } from "drizzle-orm";
+import { PYTHON_SERVICE_URL, pythonHeaders } from "../lib/config";
 
 const router = Router();
-const PYTHON_SERVICE_URL = process.env["PYTHON_SERVICE_URL"] || "http://localhost:8001";
+
+// B-04: Keep timeout below typical proxy timeout (60s). Parsing is async in Python anyway.
+const PARSE_TIMEOUT_MS = 55_000;
 
 // Parse members of a group via Telethon
 router.get("/parse/members", async (req, res) => {
@@ -15,7 +18,10 @@ router.get("/parse/members", async (req, res) => {
       return;
     }
     const url = `${PYTHON_SERVICE_URL}/parse/members?group_username=${encodeURIComponent(groupUsername as string)}&limit=${limit}`;
-    const response = await fetch(url, { signal: AbortSignal.timeout(180000) });
+    const response = await fetch(url, {
+      headers: pythonHeaders(),
+      signal: AbortSignal.timeout(PARSE_TIMEOUT_MS),
+    });
     const data = await response.json();
     res.json(data);
   } catch (err) {
@@ -29,7 +35,10 @@ router.get("/parse/dialogs", async (req, res) => {
   try {
     const { limit = "200" } = req.query;
     const url = `${PYTHON_SERVICE_URL}/parse/dialogs?limit=${limit}`;
-    const response = await fetch(url, { signal: AbortSignal.timeout(30000) });
+    const response = await fetch(url, {
+      headers: pythonHeaders(),
+      signal: AbortSignal.timeout(30000),
+    });
     const data = await response.json();
     res.json(data);
   } catch (err) {
@@ -49,9 +58,9 @@ router.post("/parse/import-groups", async (req, res) => {
 
     const response = await fetch(`${PYTHON_SERVICE_URL}/parse/import-groups`, {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      headers: pythonHeaders(),
       body: JSON.stringify({ usernames }),
-      signal: AbortSignal.timeout(90000),
+      signal: AbortSignal.timeout(PARSE_TIMEOUT_MS),
     });
     const data = await response.json();
 

@@ -2,10 +2,14 @@ import { Router } from "express";
 import { db } from "@workspace/db";
 import { groupsTable, jobsTable } from "@workspace/db";
 import { eq } from "drizzle-orm";
+import { PYTHON_SERVICE_URL, pythonHeaders } from "../lib/config";
 
 const router = Router();
 
-const PYTHON_SERVICE_URL = process.env["PYTHON_SERVICE_URL"] || "http://localhost:8001";
+function parsedId(raw: string | undefined): number | null {
+  const id = parseInt(raw ?? "");
+  return isNaN(id) ? null : id;
+}
 
 router.get("/groups", async (req, res) => {
   try {
@@ -45,7 +49,8 @@ router.post("/groups", async (req, res) => {
 
 router.put("/groups/:id", async (req, res) => {
   try {
-    const id = parseInt(req.params["id"]!);
+    const id = parsedId(req.params["id"]);
+    if (id === null) { res.status(400).json({ error: "Invalid ID" }); return; }
     const { title, username, membersCount, type, status } = req.body;
     const update: Record<string, unknown> = {};
     if (title !== undefined) update["title"] = title;
@@ -63,7 +68,8 @@ router.put("/groups/:id", async (req, res) => {
 
 router.delete("/groups/:id", async (req, res) => {
   try {
-    const id = parseInt(req.params["id"]!);
+    const id = parsedId(req.params["id"]);
+    if (id === null) { res.status(400).json({ success: false, message: "Invalid ID" }); return; }
     await db.delete(groupsTable).where(eq(groupsTable.id, id));
     res.json({ success: true, message: "Group deleted" });
   } catch (err) {
@@ -100,7 +106,7 @@ router.post("/groups/join", async (req, res) => {
     try {
       const response = await fetch(`${PYTHON_SERVICE_URL}/groups/join`, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: pythonHeaders(),
         body: JSON.stringify({
           groups: targetGroups.map(g => ({
             id: g.id,
@@ -110,6 +116,7 @@ router.post("/groups/join", async (req, res) => {
           })),
           delaySeconds,
         }),
+        signal: AbortSignal.timeout(10000),
       });
       const data = await response.json();
       res.json({ ...data, jobIds: jobRecords.map(j => j.id) });
@@ -125,17 +132,31 @@ router.post("/groups/join", async (req, res) => {
 router.put("/groups/join-status", async (req, res) => {
   try {
     const { id, status, error } = req.body;
+    if (!id || isNaN(Number(id))) {
+      res.status(400).json({ success: false, message: "Invalid group id" });
+      return;
+    }
     await db.update(groupsTable).set({ status }).where(eq(groupsTable.id, id));
 
-    // Create or update job record when Python calls back
-    await db.insert(jobsTable).values({
-      type: "join",
-      status: status === "joined" ? "completed" : "failed",
-      groupId: id,
-      message: status === "joined" ? "Успішно вступлено" : "Помилка вступу",
-      error: error ?? null,
-      completedAt: new Date(),
-    });
+    // C-05: Update existing job record if it exists, otherwise insert new one
+    const jobStatus = status === "joined" ? "completed" : "failed";
+    const jobMessage = status === "joined" ? "Успішно вступлено" : "Помилка вступу";
+
+    const updated = await db.update(jobsTable)
+      .set({ status: jobStatus, message: jobMessage, error: error ?? null, completedAt: new Date() })
+      .where(eq(jobsTable.groupId, id))
+      .returning();
+
+    if (updated.length === 0) {
+      await db.insert(jobsTable).values({
+        type: "join",
+        status: jobStatus,
+        groupId: id,
+        message: jobMessage,
+        error: error ?? null,
+        completedAt: new Date(),
+      });
+    }
 
     res.json({ success: true });
   } catch (err) {

@@ -1,28 +1,46 @@
 import { Router } from "express";
 import { db } from "@workspace/db";
 import { parsedContactsTable } from "@workspace/db";
-import { desc } from "drizzle-orm";
+import { desc, ilike, eq, and, or } from "drizzle-orm";
 
 const router = Router();
 
 router.get("/contacts", async (req, res) => {
   try {
     const { search, sourceGroup } = req.query;
-    let query = db.select().from(parsedContactsTable).orderBy(desc(parsedContactsTable.createdAt));
-    const contacts = await query;
 
-    const filtered = contacts.filter(c => {
-      if (search) {
-        const q = (search as string).toLowerCase();
-        const matches = [c.firstName, c.lastName, c.username, c.phone, c.telegramId]
-          .some(f => f?.toLowerCase().includes(q));
-        if (!matches) return false;
-      }
-      if (sourceGroup && c.sourceGroup !== sourceGroup) return false;
-      return true;
-    });
+    // B-03: Push filtering into SQL instead of loading all rows into memory
+    const conditions = [];
 
-    res.json({ contacts: filtered, total: filtered.length });
+    if (search) {
+      const q = `%${(search as string).toLowerCase()}%`;
+      conditions.push(
+        or(
+          ilike(parsedContactsTable.firstName, q),
+          ilike(parsedContactsTable.lastName, q),
+          ilike(parsedContactsTable.username, q),
+          ilike(parsedContactsTable.phone, q),
+          ilike(parsedContactsTable.telegramId, q),
+        )
+      );
+    }
+
+    if (sourceGroup) {
+      conditions.push(eq(parsedContactsTable.sourceGroup, sourceGroup as string));
+    }
+
+    const contacts = conditions.length > 0
+      ? await db
+          .select()
+          .from(parsedContactsTable)
+          .where(conditions.length === 1 ? conditions[0] : and(...conditions))
+          .orderBy(desc(parsedContactsTable.createdAt))
+      : await db
+          .select()
+          .from(parsedContactsTable)
+          .orderBy(desc(parsedContactsTable.createdAt));
+
+    res.json({ contacts, total: contacts.length });
   } catch (err) {
     req.log.error({ err }, "List contacts error");
     res.status(500).json({ contacts: [], total: 0 });

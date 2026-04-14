@@ -14,6 +14,16 @@ import { formatDistanceToNow } from "date-fns";
 import { uk } from "date-fns/locale";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 
 const scheduleLabel = (type: string, interval?: number | null) => {
   const map: Record<string, string> = {
@@ -50,9 +60,10 @@ export default function Campaigns() {
   const pauseCampaign = usePauseCampaign();
   const deleteCampaign = useDeleteCampaign();
 
-  // Per-campaign delay configuration
   const [campaignDelays, setCampaignDelays] = useState<Record<number, string>>({});
   const [showDelayFor, setShowDelayFor] = useState<number | null>(null);
+  // B-08: Replace window.confirm() with AlertDialog
+  const [deleteTargetId, setDeleteTargetId] = useState<number | null>(null);
 
   const getDelay = (id: number) => parseInt(campaignDelays[id] ?? "5");
 
@@ -73,10 +84,18 @@ export default function Campaigns() {
     });
   };
 
-  const handleDelete = (id: number) => {
-    if (!confirm("Видалити кампанію?")) return;
-    deleteCampaign.mutate({ data: { id } }, {
-      onSuccess: () => { toast({ title: "Видалено" }); queryClient.invalidateQueries({ queryKey: getListCampaignsQueryKey() }); },
+  const confirmDelete = () => {
+    if (deleteTargetId === null) return;
+    deleteCampaign.mutate({ data: { id: deleteTargetId } }, {
+      onSuccess: () => {
+        toast({ title: "Видалено" });
+        queryClient.invalidateQueries({ queryKey: getListCampaignsQueryKey() });
+        setDeleteTargetId(null);
+      },
+      onError: () => {
+        toast({ title: "Помилка видалення", variant: "destructive" });
+        setDeleteTargetId(null);
+      },
     });
   };
 
@@ -125,13 +144,12 @@ export default function Campaigns() {
                     <Button variant="ghost" size="icon" className="h-8 w-8"><Edit className="h-3.5 w-3.5" /></Button>
                   </Link>
                   <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground hover:text-destructive"
-                    onClick={() => handleDelete(c.id)} disabled={deleteCampaign.isPending}>
+                    onClick={() => setDeleteTargetId(c.id)} disabled={deleteCampaign.isPending}>
                     <Trash2 className="h-3.5 w-3.5" />
                   </Button>
                 </div>
               </div>
 
-              {/* Delay + Start inline panel */}
               {showDelayFor === c.id && (
                 <div className="flex items-center gap-2 px-3 py-2 rounded-xl bg-primary/8 border border-primary/20">
                   <Settings2 className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
@@ -175,9 +193,9 @@ export default function Campaigns() {
                   <span className="text-destructive font-mono">{c.failCount}</span>
                 </span>
 
-                {c.targetGroupIds?.length > 0 && (
+                {(c.targetGroupIds ?? []).length > 0 && (
                   <span className="text-[11px] text-muted-foreground">
-                    {c.targetGroupIds.length} груп
+                    {(c.targetGroupIds ?? []).length} груп
                   </span>
                 )}
 
@@ -191,6 +209,27 @@ export default function Campaigns() {
           ))}
         </div>
       )}
+
+      {/* B-08: AlertDialog instead of window.confirm() */}
+      <AlertDialog open={deleteTargetId !== null} onOpenChange={(open) => !open && setDeleteTargetId(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Видалити кампанію?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Цю дію не можна скасувати. Кампанія буде видалена назавжди.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Скасувати</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={confirmDelete}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              {deleteCampaign.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : "Видалити"}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }

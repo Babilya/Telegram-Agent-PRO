@@ -1,14 +1,14 @@
 import { Router } from "express";
+import { PYTHON_SERVICE_URL, pythonHeaders } from "../lib/config";
 
 const router = Router();
-
-const PYTHON_SERVICE_URL = process.env["PYTHON_SERVICE_URL"] || "http://localhost:8001";
 
 async function proxyToPython(path: string, method: string = "GET", body?: unknown) {
   const url = `${PYTHON_SERVICE_URL}${path}`;
   const opts: RequestInit = {
     method,
-    headers: { "Content-Type": "application/json" },
+    headers: pythonHeaders(),
+    signal: AbortSignal.timeout(15000),
   };
   if (body) opts.body = JSON.stringify(body);
   const res = await fetch(url, opts);
@@ -21,7 +21,7 @@ router.get("/auth/status", async (req, res) => {
     res.json(data);
   } catch (err) {
     req.log.error({ err }, "Auth status error");
-    res.json({ authenticated: false, phone: null, username: null, firstName: null });
+    res.json({ authenticated: false, phone: null, username: null, firstName: null, id: null });
   }
 });
 

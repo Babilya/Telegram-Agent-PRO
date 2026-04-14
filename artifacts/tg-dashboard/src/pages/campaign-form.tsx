@@ -1,6 +1,6 @@
 import { useEffect } from "react";
 import { useLocation, useParams } from "wouter";
-import { useForm } from "react-hook-form";
+import { useForm, useWatch } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
 import {
@@ -35,12 +35,24 @@ const scheduleTypes = [
   { value: "custom",   label: "Довільний інтервал" },
 ] as const;
 
+// NF-02: intervalHours required when scheduleType is "custom"
 const formSchema = z.object({
   name: z.string().min(1, "Введіть назву кампанії"),
   message: z.string().min(1, "Введіть текст повідомлення"),
   scheduleType: z.enum(["once", "hourly", "every2h", "every4h", "every8h", "every12h", "daily", "custom"]),
   intervalHours: z.string().optional(),
   targetGroupIds: z.array(z.number()).min(1, "Оберіть хоча б одну групу"),
+}).superRefine((data, ctx) => {
+  if (data.scheduleType === "custom") {
+    const val = parseInt(data.intervalHours ?? "");
+    if (isNaN(val) || val < 1) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: "Вкажіть інтервал (мінімум 1 год) для довільного розкладу",
+        path: ["intervalHours"],
+      });
+    }
+  }
 });
 
 export default function CampaignForm() {
@@ -77,7 +89,8 @@ export default function CampaignForm() {
         message: campaign.message,
         scheduleType: campaign.scheduleType as any,
         intervalHours: campaign.intervalHours ? campaign.intervalHours.toString() : "",
-        targetGroupIds: campaign.targetGroupIds,
+        // T-05: Ensure targetGroupIds is always an array, never null
+        targetGroupIds: Array.isArray(campaign.targetGroupIds) ? campaign.targetGroupIds : [],
       });
     }
   }, [isEdit, campaign, form]);
@@ -119,6 +132,9 @@ export default function CampaignForm() {
   const isSaving = createCampaign.isPending || updateCampaign.isPending;
   const isLoading = isLoadingGroups || (isEdit && isLoadingCampaign);
   const selectedScheduleType = form.watch("scheduleType");
+
+  // B-10: Watch targetGroupIds at top level to avoid nested FormField conflicts
+  const selectedGroupIds = useWatch({ control: form.control, name: "targetGroupIds" }) ?? [];
 
   if (isLoading) {
     return (
@@ -209,7 +225,7 @@ export default function CampaignForm() {
                   <FormField control={form.control} name="intervalHours"
                     render={({ field }) => (
                       <FormItem>
-                        <FormLabel className="text-xs">Інтервал (год)</FormLabel>
+                        <FormLabel className="text-xs">Інтервал (год) *</FormLabel>
                         <FormControl>
                           <Input type="number" min="1" placeholder="48" {...field} />
                         </FormControl>
@@ -228,45 +244,55 @@ export default function CampaignForm() {
               <p className="text-xs text-muted-foreground">Оберіть групи, куди надсилати повідомлення.</p>
             </CardHeader>
             <CardContent className="px-4 pb-4">
-              <FormField control={form.control} name="targetGroupIds"
-                render={() => (
-                  <FormItem>
-                    <div className="max-h-56 overflow-y-auto border border-border rounded-xl p-2 space-y-1">
-                      {!groupsData?.groups?.length ? (
-                        <div className="p-4 text-center text-muted-foreground text-sm">
-                          Немає вступлених груп. Спочатку вступіть у групи.
+              {/* B-10: Removed nested FormField with same name. Use direct form.setValue for checkboxes. */}
+              <div className="max-h-56 overflow-y-auto border border-border rounded-xl p-2 space-y-1">
+                {!groupsData?.groups?.length ? (
+                  <div className="p-4 text-center text-muted-foreground text-sm">
+                    Немає вступлених груп. Спочатку вступіть у групи.
+                  </div>
+                ) : (
+                  groupsData.groups.map(group => {
+                    const isChecked = selectedGroupIds.includes(group.id);
+                    return (
+                      <div
+                        key={group.id}
+                        className="flex flex-row items-center space-x-3 space-y-0 rounded-lg p-2 hover:bg-secondary/50 cursor-pointer"
+                        onClick={() => {
+                          const current = form.getValues("targetGroupIds") ?? [];
+                          form.setValue(
+                            "targetGroupIds",
+                            isChecked ? current.filter(v => v !== group.id) : [...current, group.id],
+                            { shouldValidate: true }
+                          );
+                        }}
+                      >
+                        <Checkbox
+                          checked={isChecked}
+                          onCheckedChange={(checked) => {
+                            const current = form.getValues("targetGroupIds") ?? [];
+                            form.setValue(
+                              "targetGroupIds",
+                              checked ? [...current, group.id] : current.filter(v => v !== group.id),
+                              { shouldValidate: true }
+                            );
+                          }}
+                        />
+                        <div className="leading-none">
+                          <p className="cursor-pointer font-medium text-sm">{group.title}</p>
+                          {group.username && (
+                            <p className="text-xs text-muted-foreground font-mono">@{group.username}</p>
+                          )}
                         </div>
-                      ) : (
-                        groupsData.groups.map(group => (
-                          <FormField key={group.id} control={form.control} name="targetGroupIds"
-                            render={({ field }) => (
-                              <FormItem className="flex flex-row items-center space-x-3 space-y-0 rounded-lg p-2 hover:bg-secondary/50 cursor-pointer">
-                                <FormControl>
-                                  <Checkbox
-                                    checked={field.value?.includes(group.id)}
-                                    onCheckedChange={(checked) => {
-                                      return checked
-                                        ? field.onChange([...field.value, group.id])
-                                        : field.onChange(field.value?.filter(v => v !== group.id));
-                                    }}
-                                  />
-                                </FormControl>
-                                <div className="leading-none">
-                                  <FormLabel className="cursor-pointer font-medium text-sm">{group.title}</FormLabel>
-                                  {group.username && (
-                                    <p className="text-xs text-muted-foreground font-mono">@{group.username}</p>
-                                  )}
-                                </div>
-                              </FormItem>
-                            )}
-                          />
-                        ))
-                      )}
-                    </div>
-                    <FormMessage />
-                  </FormItem>
+                      </div>
+                    );
+                  })
                 )}
-              />
+              </div>
+              {form.formState.errors.targetGroupIds && (
+                <p className="text-[12px] text-destructive mt-1.5">
+                  {form.formState.errors.targetGroupIds.message}
+                </p>
+              )}
             </CardContent>
           </Card>
 

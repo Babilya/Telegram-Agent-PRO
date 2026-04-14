@@ -19,8 +19,11 @@ export interface AuthStatus {
 export interface AuthResult {
   success: boolean;
   message: string;
+  error?: string | null;
   requiresPassword?: boolean | null;
+  requires2FA?: boolean | null;
   authenticated?: boolean | null;
+  phoneCodeHash?: string | null;
 }
 
 export interface SendCodeBody {
@@ -35,6 +38,7 @@ export interface VerifyCodeBody {
 
 export interface VerifyPasswordBody {
   password: string;
+  phone?: string;
 }
 
 export type TelegramGroupType =

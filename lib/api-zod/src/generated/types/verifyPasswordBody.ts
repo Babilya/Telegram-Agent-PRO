@@ -8,4 +8,5 @@
 
 export interface VerifyPasswordBody {
   password: string;
+  phone?: string;
 }

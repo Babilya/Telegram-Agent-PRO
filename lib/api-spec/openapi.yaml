@@ -426,11 +426,20 @@ components:
           type: boolean
         message:
           type: string
+        error:
+          type: string
+          nullable: true
         requiresPassword:
+          type: boolean
+          nullable: true
+        requires2FA:
           type: boolean
           nullable: true
         authenticated:
           type: boolean
+          nullable: true
+        phoneCodeHash:
+          type: string
           nullable: true
       required: [success, message]
 
@@ -456,6 +465,8 @@ components:
       type: object
       properties:
         password:
+          type: string
+        phone:
           type: string
       required: [password]
 

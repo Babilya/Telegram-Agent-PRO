@@ -34,8 +34,11 @@ export const SendAuthCodeBody = zod.object({
 export const SendAuthCodeResponse = zod.object({
   success: zod.boolean(),
   message: zod.string(),
+  error: zod.string().nullish(),
   requiresPassword: zod.boolean().nullish(),
+  requires2FA: zod.boolean().nullish(),
   authenticated: zod.boolean().nullish(),
+  phoneCodeHash: zod.string().nullish(),
 });
 
 /**
@@ -50,8 +53,11 @@ export const VerifyAuthCodeBody = zod.object({
 export const VerifyAuthCodeResponse = zod.object({
   success: zod.boolean(),
   message: zod.string(),
+  error: zod.string().nullish(),
   requiresPassword: zod.boolean().nullish(),
+  requires2FA: zod.boolean().nullish(),
   authenticated: zod.boolean().nullish(),
+  phoneCodeHash: zod.string().nullish(),
 });
 
 /**
@@ -59,13 +65,17 @@ export const VerifyAuthCodeResponse = zod.object({
  */
 export const VerifyAuthPasswordBody = zod.object({
   password: zod.string(),
+  phone: zod.string().optional(),
 });
 
 export const VerifyAuthPasswordResponse = zod.object({
   success: zod.boolean(),
   message: zod.string(),
+  error: zod.string().nullish(),
   requiresPassword: zod.boolean().nullish(),
+  requires2FA: zod.boolean().nullish(),
   authenticated: zod.boolean().nullish(),
+  phoneCodeHash: zod.string().nullish(),
 });
 
 /**
@@ -74,8 +84,11 @@ export const VerifyAuthPasswordResponse = zod.object({
 export const LogoutAuthResponse = zod.object({
   success: zod.boolean(),
   message: zod.string(),
+  error: zod.string().nullish(),
   requiresPassword: zod.boolean().nullish(),
+  requires2FA: zod.boolean().nullish(),
   authenticated: zod.boolean().nullish(),
+  phoneCodeHash: zod.string().nullish(),
 });
 
 /**

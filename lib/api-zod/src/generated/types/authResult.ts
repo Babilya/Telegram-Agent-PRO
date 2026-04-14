@@ -9,6 +9,9 @@
 export interface AuthResult {
   success: boolean;
   message: string;
+  error?: string | null;
   requiresPassword?: boolean | null;
+  requires2FA?: boolean | null;
   authenticated?: boolean | null;
+  phoneCodeHash?: string | null;
 }

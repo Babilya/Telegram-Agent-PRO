@@ -145,6 +145,12 @@ function InputField({ label, children, error }: { label: string; children: React
 const PROGRESS_STEPS: Step[] = ["phone", "code", "success"];
 const PROGRESS_STEPS_2FA: Step[] = ["phone", "code", "password", "success"];
 
+function stepBadge(step: Step, progressSteps: Step[]): string {
+  const idx = progressSteps.indexOf(step as any);
+  if (idx === -1) return "";
+  return `Крок ${idx + 1} з ${progressSteps.length}`;
+}
+
 export function AuthModal({ onClose, onSuccess }: AuthModalProps) {
   const { toast } = useToast();
   const queryClient = useQueryClient();
@@ -315,7 +321,7 @@ export function AuthModal({ onClose, onSuccess }: AuthModalProps) {
         )}
 
         {/* ── SCROLLABLE CONTENT ── */}
-        <div className="relative z-10 flex-1 overflow-y-auto overscroll-contain px-5 pt-2 pb-7 flex flex-col gap-3">
+        <div className="relative z-10 flex-1 overflow-y-auto overscroll-contain px-5 pt-2 pb-5 flex flex-col gap-3">
 
           {/* ══ ПІДГОТОВКА ══ */}
           {step === "prep" && (
@@ -376,25 +382,22 @@ export function AuthModal({ onClose, onSuccess }: AuthModalProps) {
           {/* ══ НОМЕР ТЕЛЕФОНУ ══ */}
           {step === "phone" && (
             <>
-              <StepHeading badge="Крок 1 з 2" title="Номер" accent="телефону" />
-              <p className="text-[13px] leading-relaxed" style={{ color: SUB }}>
-                Telegram надішле код підтвердження прямо у застосунок.
-              </p>
+              <StepHeading badge={stepBadge("phone", progressSteps)} title="Номер" accent="телефону" />
 
-              <div className="flex flex-col gap-2">
+              <div className="grid grid-cols-2 gap-2">
                 {([
-                  { icon: Globe,      t: "Міжнародний формат",  s: "Починається з + та коду країни" },
-                  { icon: Smartphone, t: "Код прийде в Telegram", s: "Або SMS якщо ви не в додатку" },
-                  { icon: Clock,      t: "Код дійсний 5 хвилин", s: "Після — можна запросити новий" },
-                  { icon: Lock,       t: "Номер захищено",       s: "Використовується лише для входу" },
+                  { icon: Globe,      t: "Міжнародний формат",   s: "+ та код країни" },
+                  { icon: Smartphone, t: "Код в Telegram",        s: "Або SMS якщо не в додатку" },
+                  { icon: Clock,      t: "Дійсний 5 хвилин",     s: "Після — новий код" },
+                  { icon: Lock,       t: "Номер захищено",        s: "Лише для входу" },
                 ] as { icon: React.FC<any>; t: string; s: string }[]).map(({ icon: Icon, t, s }) => (
-                  <div key={t} className="flex items-center gap-3 rounded-2xl px-4 py-3" style={convexCard}>
-                    <div className="w-8 h-8 rounded-xl flex items-center justify-center" style={iconWrap}>
-                      <Icon style={{ color: "hsl(271 91% 80%)", width: 14, height: 14 }} />
+                  <div key={t} className="flex flex-col gap-1.5 rounded-2xl px-3 py-2.5" style={convexCard}>
+                    <div className="w-7 h-7 rounded-lg flex items-center justify-center" style={iconWrap}>
+                      <Icon style={{ color: "hsl(271 91% 80%)", width: 13, height: 13 }} />
                     </div>
                     <div>
-                      <p className="font-display font-bold text-white text-[13px] leading-tight">{t}</p>
-                      <p className="text-[12px] mt-0.5" style={{ color: SUB }}>{s}</p>
+                      <p className="font-display font-bold text-white text-[12px] leading-tight">{t}</p>
+                      <p className="text-[11px] mt-0.5" style={{ color: SUB }}>{s}</p>
                     </div>
                   </div>
                 ))}
@@ -434,7 +437,7 @@ export function AuthModal({ onClose, onSuccess }: AuthModalProps) {
           {/* ══ КОД ПІДТВЕРДЖЕННЯ ══ */}
           {step === "code" && (
             <>
-              <StepHeading badge="Крок 2 з 2" title="Код з" accent="Telegram" />
+              <StepHeading badge={stepBadge("code", progressSteps)} title="Код з" accent="Telegram" />
               <p className="text-[13px] leading-relaxed" style={{ color: SUB }}>
                 Код надіслано на <span className="text-white font-semibold">{phone}</span>.
                 Відкрийте Telegram і знайдіть повідомлення від сервісного акаунту.
@@ -493,7 +496,7 @@ export function AuthModal({ onClose, onSuccess }: AuthModalProps) {
           {/* ══ 2FA ПАРОЛЬ ══ */}
           {step === "password" && (
             <>
-              <StepHeading badge="Двофакторний захист" title="Хмарний" accent="пароль" />
+              <StepHeading badge={stepBadge("password", progressSteps)} title="Хмарний" accent="пароль" />
               <p className="text-[13px] leading-relaxed" style={{ color: SUB }}>
                 Ваш акаунт захищено. Введіть пароль з: Telegram → Налаштування → Конфіденційність → Двоетапна перевірка.
               </p>

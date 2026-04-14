@@ -1,11 +1,11 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
 import {
   Loader2, X, Smartphone, KeyRound, ShieldCheck, ArrowRight,
-  CheckCircle2, Settings, Lock, ExternalLink, Hash, RotateCcw,
-  Globe, Clock, Megaphone, Search, Bug, LayoutDashboard, User,
+  CheckCircle2, Settings, Lock, ExternalLink,
+  RotateCcw, Globe, Clock, Megaphone, Search, Bug, LayoutDashboard, User,
 } from "lucide-react";
 import { TelegramIcon } from "@/components/ui/telegram-icon";
 import { useQueryClient } from "@tanstack/react-query";
@@ -26,8 +26,6 @@ interface AuthModalProps {
 
 type Step =
   | "prep"
-  | "apiid"
-  | "apihash"
   | "phone"
   | "code"
   | "password"
@@ -106,8 +104,6 @@ function InfoCard({ icon, title, sub }: { icon: React.FC<any>; title: string; su
 function StepLabel({ step }: { step: Step | null }) {
   const labels: Partial<Record<Step, string>> = {
     prep:      "Підготовка",
-    apiid:     "Крок 1 — API ID",
-    apihash:   "Крок 2 — API Hash",
     phone:     "Номер телефону",
     code:      "Код підтвердження",
     password:  "Пароль 2FA",
@@ -129,8 +125,6 @@ export function AuthModal({ onClose, onSuccess }: AuthModalProps) {
   const [configLoaded, setConfigLoaded] = useState(false);
   const [phone, setPhone] = useState("");
   const [phoneCodeHash, setPhoneCodeHash] = useState("");
-  const [apiId, setApiId] = useState("");
-  const [apiHash, setApiHash] = useState("");
   const [codeRaw, setCodeRaw] = useState("");
   const [codeDisplay, setCodeDisplay] = useState("");
 
@@ -140,6 +134,7 @@ export function AuthModal({ onClose, onSuccess }: AuthModalProps) {
   const verifyPassword = useVerifyAuthPassword();
   const logout = useLogoutAuth();
 
+  // Load config first
   useEffect(() => {
     fetch("/api/auth/config")
       .then(r => r.json())
@@ -151,20 +146,13 @@ export function AuthModal({ onClose, onSuccess }: AuthModalProps) {
       .catch(() => { setConfigLoaded(true); setStep("prep"); });
   }, []);
 
+  // B-05: Single effect for step initialization — no competing setTimeout
+  // Only transition once: when config is loaded AND authStatus is known AND we haven't set a step yet
   useEffect(() => {
     if (configLoaded && hasCredentials && authStatus !== undefined && step === null) {
       setStep(authStatus.authenticated ? "connected" : "phone");
     }
   }, [configLoaded, hasCredentials, authStatus, step]);
-
-  useEffect(() => {
-    if (!configLoaded) return;
-    if (!hasCredentials) return;
-    const t = setTimeout(() => {
-      if (step === null) setStep("phone");
-    }, 4000);
-    return () => clearTimeout(t);
-  }, [configLoaded, hasCredentials, step]);
 
   const phoneForm = useForm<{ phone: string }>({
     resolver: zodResolver(z.object({
@@ -300,162 +288,59 @@ export function AuthModal({ onClose, onSuccess }: AuthModalProps) {
           {step === "prep" && (
             <>
               <p className="text-[13px] leading-relaxed px-0.5" style={{ color: SUB }}>
-                Для підключення потрібні чотири речі:
+                Для входу потрібні облікові дані вашого Telegram-акаунту:
               </p>
 
               <div className="flex flex-col gap-2">
-                <InfoCard icon={Settings}   title="API ID та API Hash"       sub="Отримати безкоштовно на my.telegram.org" />
-                <InfoCard icon={Smartphone} title="Номер телефону акаунта"   sub="Міжнародний формат — +380…" />
-                <InfoCard icon={KeyRound}   title="Код підтвердження"        sub="5 цифр — надійде прямо в Telegram" />
-                <InfoCard icon={ShieldCheck}title="Пароль 2FA (якщо є)"     sub="Хмарний пароль з налаштувань Telegram" />
+                {/* 1. Phone first */}
+                <InfoCard icon={Smartphone} title="Мобільний номер телефону"  sub="Міжнародний формат — +380…" />
+                {/* 2. API second — with clickable link */}
+                <div className="flex items-center gap-3 px-3 py-2.5 rounded-2xl" style={card}>
+                  <IconBox icon={Settings} />
+                  <div>
+                    <p className="text-[13px] font-display font-bold text-white leading-tight">API ID та API Hash</p>
+                    <a
+                      href="https://my.telegram.org/apps"
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="inline-flex items-center gap-1 text-[12px] mt-0.5 underline-offset-2 hover:underline"
+                      style={{ color: "hsl(271 91% 72%)" }}
+                    >
+                      Отримати безкоштовно на my.telegram.org <ExternalLink className="h-3 w-3" />
+                    </a>
+                  </div>
+                </div>
+                <InfoCard icon={KeyRound}    title="Код підтвердження"        sub="5 цифр — надійде прямо в Telegram" />
+                <InfoCard icon={ShieldCheck} title="Пароль 2FA (якщо є)"      sub="Хмарний пароль з налаштувань Telegram" />
               </div>
 
-              <div className="flex items-start gap-2.5 px-3 py-2.5 rounded-xl"
-                style={{ background: "hsl(271 91% 65% / 0.08)", border: "1px solid hsl(271 91% 65% / 0.18)" }}>
-                <Lock style={{ color: PRI, width: 14, height: 14, marginTop: 1, flexShrink: 0 }} />
-                <p className="text-[12px] leading-relaxed" style={{ color: SUB }}>
-                  Всі дані зберігаються <span className="text-white font-medium">локально</span> і нікуди не передаються.
-                  Ви можете будь-коли скинути сесію.
-                </p>
+              {/* Combined info block: API + password security — no yellow warning */}
+              <div className="flex flex-col gap-0 rounded-2xl overflow-hidden"
+                style={{ border: "1px solid hsl(271 91% 65% / 0.18)" }}>
+                <div className="flex items-start gap-2.5 px-3 py-2.5"
+                  style={{ background: "hsl(271 91% 65% / 0.08)" }}>
+                  <Settings style={{ color: PRI, width: 13, height: 13, marginTop: 2, flexShrink: 0 }} />
+                  <p className="text-[12px] leading-relaxed" style={{ color: SUB }}>
+                    <span className="text-white font-medium">API ID / API Hash</span> — видаються безкоштовно на{" "}
+                    <a href="https://my.telegram.org/apps" target="_blank" rel="noopener noreferrer"
+                      className="underline underline-offset-2" style={{ color: "hsl(271 91% 72%)" }}>
+                      my.telegram.org
+                    </a>. Зберігаються лише на сервері й ніколи не передаються третім особам.
+                  </p>
+                </div>
+                <div className="flex items-start gap-2.5 px-3 py-2.5"
+                  style={{ background: "hsl(271 91% 65% / 0.05)", borderTop: "1px solid hsl(271 91% 65% / 0.10)" }}>
+                  <Lock style={{ color: PRI, width: 13, height: 13, marginTop: 2, flexShrink: 0 }} />
+                  <p className="text-[12px] leading-relaxed" style={{ color: SUB }}>
+                    <span className="text-white font-medium">Пароль 2FA</span> — не зберігається. Використовується один раз для створення сесії. Сесію можна скинути будь-коли.
+                  </p>
+                </div>
               </div>
 
-              <button onClick={() => setStep("apiid")}
+              <button onClick={() => setStep("phone")}
                 className="w-full py-3.5 rounded-2xl font-display font-bold text-sm flex items-center justify-center gap-2 mt-1"
                 style={gradBtn}>
                 <ArrowRight className="h-4 w-4" /> Продовжити
-              </button>
-            </>
-          )}
-
-          {/* ══ API ID ══ */}
-          {step === "apiid" && (
-            <>
-              <div className="flex flex-col gap-1 px-0.5">
-                <p className="text-[13px] leading-relaxed" style={{ color: SUB }}>
-                  Відкрийте{" "}
-                  <a href="https://my.telegram.org" target="_blank" rel="noopener noreferrer"
-                    className="inline-flex items-center gap-0.5 font-semibold underline-offset-2"
-                    style={{ color: "hsl(271 91% 75%)", textDecoration: "underline" }}>
-                    my.telegram.org <ExternalLink className="h-3 w-3" />
-                  </a>
-                  {" "}→ <span className="text-white font-medium">API development tools</span>
-                </p>
-                <p className="text-[13px] leading-relaxed mt-0.5" style={{ color: SUB }}>
-                  Знайдіть поле <span className="text-white font-medium">App api_id</span> — це <span className="text-white">число</span>.
-                </p>
-              </div>
-
-              <div className="flex items-center gap-2 px-3 py-2 rounded-xl"
-                style={{ background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.06)" }}>
-                <span className="text-[11px] font-mono" style={{ color: DIM }}>Приклад:</span>
-                <span className="text-[14px] font-mono font-bold text-white tracking-widest">20799080</span>
-              </div>
-
-              <InputField label="App api_id (лише цифри)">
-                <input
-                  type="tel"
-                  placeholder="20799080"
-                  value={apiId}
-                  onChange={(e) => setApiId(e.target.value.replace(/\D/g, ""))}
-                  className={inputBase}
-                  style={inputSt}
-                  onFocus={(e) => Object.assign(e.currentTarget.style, inputFocusSt)}
-                  onBlur={(e) => Object.assign(e.currentTarget.style, inputSt)}
-                />
-              </InputField>
-
-              {apiId && !/^\d{5,}$/.test(apiId) && (
-                <div className="flex items-start gap-2 px-3 py-2 rounded-xl"
-                  style={{ background: "hsl(0 85% 60% / 0.08)", border: "1px solid hsl(0 80% 60% / 0.18)" }}>
-                  <p className="text-[12px]" style={{ color: "hsl(0 80% 72%)" }}>
-                    API ID складається лише з цифр — мінімум 5 знаків.
-                  </p>
-                </div>
-              )}
-
-              <button
-                onClick={() => {
-                  if (!/^\d{5,}$/.test(apiId)) {
-                    toast({ title: "Невірний API ID", description: "Введіть числовий ідентифікатор (мінімум 5 цифр)", variant: "destructive" });
-                    return;
-                  }
-                  setStep("apihash");
-                }}
-                className="w-full py-3.5 rounded-2xl font-display font-bold text-sm flex items-center justify-center gap-2 mt-1"
-                style={gradBtn}>
-                <ArrowRight className="h-4 w-4" /> Далі — API Hash
-              </button>
-
-              <button onClick={() => setStep("prep")}
-                className="text-center text-xs py-1 transition-colors hover:opacity-80"
-                style={{ color: DIM }}>
-                ← Назад
-              </button>
-            </>
-          )}
-
-          {/* ══ API HASH ══ */}
-          {step === "apihash" && (
-            <>
-              <div className="flex flex-col gap-1 px-0.5">
-                <p className="text-[13px] leading-relaxed" style={{ color: SUB }}>
-                  На тій же сторінці{" "}
-                  <a href="https://my.telegram.org" target="_blank" rel="noopener noreferrer"
-                    className="inline-flex items-center gap-0.5 font-semibold"
-                    style={{ color: "hsl(271 91% 75%)", textDecoration: "underline" }}>
-                    my.telegram.org <ExternalLink className="h-3 w-3" />
-                  </a>
-                  {" "}знайдіть <span className="text-white font-medium">App api_hash</span> — довгий рядок.
-                </p>
-              </div>
-
-              <div className="flex items-center gap-2 px-3 py-2 rounded-xl"
-                style={{ background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.06)" }}>
-                <span className="text-[11px] font-mono" style={{ color: DIM }}>Приклад:</span>
-                <span className="text-[13px] font-mono font-bold text-white tracking-wide">a1b2c3d4e5f6g7h8</span>
-              </div>
-
-              <div className="flex items-start gap-2 px-3 py-2 rounded-xl"
-                style={{ background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.06)" }}>
-                <Hash style={{ color: DIM, width: 12, height: 12, marginTop: 2, flexShrink: 0 }} />
-                <p className="text-[12px]" style={{ color: DIM }}>
-                  Hash чутливий до регістру — копіюйте точно як є, без пробілів.
-                </p>
-              </div>
-
-              <InputField label="App api_hash">
-                <input
-                  type="text"
-                  placeholder="a1b2c3d4e5f6g7h8i9j0"
-                  value={apiHash}
-                  onChange={(e) => setApiHash(e.target.value.trim())}
-                  className={`${inputBase} font-mono`}
-                  style={inputSt}
-                  onFocus={(e) => Object.assign(e.currentTarget.style, inputFocusSt)}
-                  onBlur={(e) => Object.assign(e.currentTarget.style, inputSt)}
-                  autoCapitalize="none"
-                  autoCorrect="off"
-                  spellCheck={false}
-                />
-              </InputField>
-
-              <button
-                onClick={() => {
-                  if (apiHash.length < 10) {
-                    toast({ title: "Невірний API Hash", description: "Hash має бути буквено-цифровим рядком від 10 символів", variant: "destructive" });
-                    return;
-                  }
-                  setStep("phone");
-                }}
-                className="w-full py-3.5 rounded-2xl font-display font-bold text-sm flex items-center justify-center gap-2 mt-1"
-                style={gradBtn}>
-                <Smartphone className="h-4 w-4" /> Далі — Авторизація
-              </button>
-
-              <button onClick={() => setStep("apiid")}
-                className="text-center text-xs py-1 transition-colors hover:opacity-80"
-                style={{ color: DIM }}>
-                ← Назад
               </button>
             </>
           )}
@@ -505,7 +390,7 @@ export function AuthModal({ onClose, onSuccess }: AuthModalProps) {
               </form>
 
               {!hasCredentials && (
-                <button onClick={() => setStep("apihash")}
+                <button onClick={() => setStep("prep")}
                   className="text-center text-xs py-1 transition-colors hover:opacity-80"
                   style={{ color: DIM }}>
                   ← Назад

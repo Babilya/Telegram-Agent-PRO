@@ -6,25 +6,26 @@ Handles: auth, group search, auto-join, broadcast campaigns, member parsing
 import asyncio
 import logging
 import os
-import json
-from datetime import datetime, timedelta
+import secrets
+from contextlib import asynccontextmanager
+from datetime import datetime
 from typing import Optional
 
-from fastapi import FastAPI, HTTPException, BackgroundTasks
+from fastapi import FastAPI, HTTPException, BackgroundTasks, Depends, Security
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.security.api_key import APIKeyHeader
 from pydantic import BaseModel
 import uvicorn
 from telethon import TelegramClient
 from telethon.tl.functions.contacts import SearchRequest
-from telethon.tl.functions.channels import JoinChannelRequest, GetFullChannelRequest
-from telethon.tl.functions.messages import ImportChatInviteRequest, GetDialogsRequest
+from telethon.tl.functions.channels import JoinChannelRequest
 from telethon.tl.types import (
-    Channel, Chat, InputPeerEmpty, PeerChannel,
+    Channel, Chat, InputPeerChannel,
     ChannelForbidden, ChatForbidden
 )
 from telethon.errors import (
     SessionPasswordNeededError, FloodWaitError,
-    UserAlreadyParticipantError, InviteHashInvalidError,
+    UserAlreadyParticipantError,
     ChatWriteForbiddenError, ChannelPrivateError
 )
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
@@ -35,30 +36,65 @@ logger = logging.getLogger(__name__)
 
 API_ID = int(os.environ.get("TELEGRAM_API_ID", "0"))
 API_HASH = os.environ.get("TELEGRAM_API_HASH", "")
-BOT_TOKEN = os.environ.get("TELEGRAM_BOT_TOKEN", "")
-PHONE = os.environ.get("TELEGRAM_PHONE", "")
 SESSION_FILE = "telegram-bot/session/user_session"
 NODE_API_URL = os.environ.get("NODE_API_URL", "http://localhost:8080")
+
+# Internal API key — shared secret between Node and Python services
+INTERNAL_API_KEY = os.environ.get("INTERNAL_API_KEY", secrets.token_hex(32))
 
 os.makedirs("telegram-bot/session", exist_ok=True)
 
 client = TelegramClient(SESSION_FILE, API_ID, API_HASH)
+scheduler = AsyncIOScheduler()
+active_campaign_jobs: dict = {}
 
-app = FastAPI(title="Telegram Bot Service")
+# ─── Security ───────────────────────────────────────────────────────────────────
+
+api_key_header = APIKeyHeader(name="X-API-Key", auto_error=False)
+
+NODE_API_ORIGIN = os.environ.get("NODE_API_ORIGIN", "http://localhost:8080")
+
+async def verify_api_key(key: Optional[str] = Security(api_key_header)):
+    if not INTERNAL_API_KEY or key == INTERNAL_API_KEY:
+        return key
+    raise HTTPException(status_code=403, detail="Invalid or missing API key")
+
+
+# ─── Lifespan ───────────────────────────────────────────────────────────────────
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    try:
+        await client.connect()
+        logger.info("Telethon client connected")
+        if await client.is_user_authorized():
+            me = await client.get_me()
+            logger.info(f"Logged in as: {me.first_name} (@{me.username})")
+    except Exception as e:
+        logger.warning(f"Startup connect warning: {e}")
+
+    scheduler.start()
+    logger.info("Scheduler started")
+
+    yield
+
+    scheduler.shutdown()
+    if client.is_connected():
+        await client.disconnect()
+
+
+# ─── App ────────────────────────────────────────────────────────────────────────
+
+app = FastAPI(title="Telegram Bot Service", lifespan=lifespan)
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
+    allow_origins=[NODE_API_ORIGIN],
     allow_methods=["*"],
     allow_headers=["*"],
 )
 
-scheduler = AsyncIOScheduler()
 
-pending_code_hash: dict = {}
-active_campaign_jobs: dict = {}
-
-
-# ─── Models ────────────────────────────────────────────────────────────────────
+# ─── Models ─────────────────────────────────────────────────────────────────────
 
 class SendCodeRequest(BaseModel):
     phone: str
@@ -69,6 +105,7 @@ class VerifyCodeRequest(BaseModel):
     phoneCodeHash: str
 
 class VerifyPasswordRequest(BaseModel):
+    phone: Optional[str] = None
     password: str
 
 class GroupInfo(BaseModel):
@@ -101,10 +138,29 @@ class ImportGroupsRequest(BaseModel):
     usernames: list[str]
 
 
+# ─── Helpers ─────────────────────────────────────────────────────────────────────
+
+async def resolve_entity(username: Optional[str], telegram_id: Optional[str]):
+    """
+    Resolve a Telegram entity. Always prefer username lookup first.
+    Falls back to numeric ID only as a last resort (requires entity in cache).
+    """
+    if username:
+        return await client.get_entity(username)
+    if telegram_id:
+        try:
+            numeric_id = int(telegram_id)
+        except (ValueError, TypeError):
+            raise ValueError(f"telegramId '{telegram_id}' is not a valid integer")
+        # get_entity by numeric ID only works if the entity is already in cache
+        return await client.get_entity(numeric_id)
+    raise ValueError("Neither username nor telegramId provided")
+
+
 # ─── Auth ───────────────────────────────────────────────────────────────────────
 
 @app.get("/auth/status")
-async def auth_status():
+async def auth_status(_key: str = Depends(verify_api_key)):
     try:
         if not client.is_connected():
             await client.connect()
@@ -123,12 +179,11 @@ async def auth_status():
 
 
 @app.post("/auth/send-code")
-async def send_code(req: SendCodeRequest):
+async def send_code(req: SendCodeRequest, _key: str = Depends(verify_api_key)):
     try:
         if not client.is_connected():
             await client.connect()
         result = await client.send_code_request(req.phone)
-        pending_code_hash[req.phone] = result.phone_code_hash
         return {
             "success": True,
             "message": "Code sent",
@@ -140,7 +195,7 @@ async def send_code(req: SendCodeRequest):
 
 
 @app.post("/auth/verify-code")
-async def verify_code(req: VerifyCodeRequest):
+async def verify_code(req: VerifyCodeRequest, _key: str = Depends(verify_api_key)):
     try:
         if not client.is_connected():
             await client.connect()
@@ -154,7 +209,7 @@ async def verify_code(req: VerifyCodeRequest):
 
 
 @app.post("/auth/verify-password")
-async def verify_password(req: VerifyPasswordRequest):
+async def verify_password(req: VerifyPasswordRequest, _key: str = Depends(verify_api_key)):
     try:
         if not client.is_connected():
             await client.connect()
@@ -168,7 +223,7 @@ async def verify_password(req: VerifyPasswordRequest):
 
 
 @app.post("/auth/logout")
-async def logout():
+async def logout(_key: str = Depends(verify_api_key)):
     try:
         if client.is_connected():
             await client.log_out()
@@ -179,7 +234,7 @@ async def logout():
 
 
 @app.get("/auth/config")
-async def get_auth_config():
+async def get_auth_config(_key: str = Depends(verify_api_key)):
     api_id = os.environ.get("TELEGRAM_API_ID")
     api_hash = os.environ.get("TELEGRAM_API_HASH")
     return {"hasCredentials": bool(api_id and api_hash)}
@@ -193,7 +248,8 @@ async def search_groups(
     minMembers: Optional[int] = None,
     maxMembers: Optional[int] = None,
     limit: int = 20,
-    groupType: str = "all"
+    groupType: str = "all",
+    _key: str = Depends(verify_api_key),
 ):
     try:
         if not client.is_connected():
@@ -210,7 +266,7 @@ async def search_groups(
             ))
 
             for chat in search_result.chats:
-                if isinstance(chat, ChannelForbidden) or isinstance(chat, ChatForbidden):
+                if isinstance(chat, (ChannelForbidden, ChatForbidden)):
                     continue
 
                 members_count = getattr(chat, "participants_count", None)
@@ -252,7 +308,7 @@ async def search_groups(
 # ─── Join Groups ────────────────────────────────────────────────────────────────
 
 @app.post("/groups/join")
-async def join_groups(req: JoinGroupsRequest, background_tasks: BackgroundTasks):
+async def join_groups(req: JoinGroupsRequest, background_tasks: BackgroundTasks, _key: str = Depends(verify_api_key)):
     background_tasks.add_task(do_join_groups, req.groups, req.delaySeconds)
     return {"success": True, "message": f"Joining {len(req.groups)} groups in background"}
 
@@ -270,37 +326,37 @@ async def do_join_groups(groups: list[GroupInfo], delay_seconds: int):
             for group in groups:
                 status = "failed"
                 error_msg = None
-                try:
-                    if group.username:
-                        entity = await client.get_entity(group.username)
+                max_retries = 2
+
+                for attempt in range(max_retries):
+                    try:
+                        entity = await resolve_entity(group.username, group.telegramId)
                         await client(JoinChannelRequest(entity))
                         status = "joined"
                         logger.info(f"Joined {group.title}")
-                    elif group.telegramId:
-                        try:
-                            entity = await client.get_entity(int(group.telegramId))
-                            await client(JoinChannelRequest(entity))
-                            status = "joined"
-                            logger.info(f"Joined {group.title} by ID")
-                        except Exception as e:
-                            error_msg = f"Cannot resolve by ID: {e}"
-                            logger.warning(f"No username for {group.title}, trying ID failed: {e}")
-                    else:
-                        error_msg = "No username or ID available"
-                        logger.warning(f"No username or ID for group {group.title}, skipping")
+                        break
 
-                except UserAlreadyParticipantError:
-                    logger.info(f"Already in {group.title}")
-                    status = "joined"
-                except FloodWaitError as e:
-                    logger.warning(f"Flood wait {e.seconds}s for {group.title}")
-                    await asyncio.sleep(e.seconds)
-                    error_msg = f"Flood wait: {e.seconds}s"
-                except ChannelPrivateError:
-                    error_msg = "Приватний канал — потрібне запрошення"
-                except Exception as e:
-                    logger.error(f"Failed to join {group.title}: {e}")
-                    error_msg = str(e)
+                    except UserAlreadyParticipantError:
+                        logger.info(f"Already in {group.title}")
+                        status = "joined"
+                        break
+
+                    except FloodWaitError as e:
+                        logger.warning(f"Flood wait {e.seconds}s for {group.title} (attempt {attempt + 1})")
+                        await asyncio.sleep(e.seconds)
+                        # Retry same group after flood wait
+                        if attempt == max_retries - 1:
+                            error_msg = f"Flood wait: {e.seconds}s, max retries reached"
+                        continue
+
+                    except ChannelPrivateError:
+                        error_msg = "Приватний канал — потрібне запрошення"
+                        break
+
+                    except Exception as e:
+                        logger.error(f"Failed to join {group.title}: {e}")
+                        error_msg = str(e)
+                        break
 
                 # Notify Node API of the result
                 try:
@@ -320,7 +376,7 @@ async def do_join_groups(groups: list[GroupInfo], delay_seconds: int):
 # ─── Campaigns ──────────────────────────────────────────────────────────────────
 
 @app.post("/campaigns/start")
-async def start_campaign(req: StartCampaignRequest, background_tasks: BackgroundTasks):
+async def start_campaign(req: StartCampaignRequest, background_tasks: BackgroundTasks, _key: str = Depends(verify_api_key)):
     campaign = req.campaign
 
     if campaign.id in active_campaign_jobs:
@@ -357,7 +413,7 @@ async def start_campaign(req: StartCampaignRequest, background_tasks: Background
 
 
 @app.post("/campaigns/pause")
-async def pause_campaign(req: PauseCampaignRequest):
+async def pause_campaign(req: PauseCampaignRequest, _key: str = Depends(verify_api_key)):
     job_id = f"campaign_{req.campaignId}"
     try:
         scheduler.remove_job(job_id)
@@ -389,22 +445,10 @@ async def send_campaign_broadcast(campaign: CampaignInfo):
 
         for group in target_groups:
             try:
-                username = group.get("username")
-                telegram_id = group.get("telegramId")
-
-                if username:
-                    entity = await client.get_entity(username)
-                elif telegram_id:
-                    try:
-                        entity = await client.get_entity(int(telegram_id))
-                    except Exception:
-                        logger.warning(f"Cannot find entity for {group.get('title')}")
-                        failed += 1
-                        continue
-                else:
-                    failed += 1
-                    continue
-
+                entity = await resolve_entity(
+                    group.get("username"),
+                    group.get("telegramId")
+                )
                 await client.send_message(entity, campaign.message)
                 sent += 1
                 logger.info(f"[Campaign {campaign.id}] Sent to {group.get('title')}")
@@ -414,15 +458,24 @@ async def send_campaign_broadcast(campaign: CampaignInfo):
                 logger.warning(f"Cannot write to {group.get('title')}")
                 failed += 1
             except FloodWaitError as e:
-                logger.warning(f"Flood wait {e.seconds}s")
+                logger.warning(f"Flood wait {e.seconds}s for campaign {campaign.id}")
                 await asyncio.sleep(e.seconds)
-                failed += 1
+                # Retry same group
+                try:
+                    entity = await resolve_entity(
+                        group.get("username"),
+                        group.get("telegramId")
+                    )
+                    await client.send_message(entity, campaign.message)
+                    sent += 1
+                except Exception as retry_e:
+                    logger.error(f"Retry failed for {group.get('title')}: {retry_e}")
+                    failed += 1
             except Exception as e:
                 logger.error(f"Broadcast error for {group.get('title')}: {e}")
                 failed += 1
 
         # Notify Node of completion
-        import httpx
         async with httpx.AsyncClient(timeout=10.0) as http:
             await http.post(
                 f"{NODE_API_URL}/api/campaigns/{campaign.id}/broadcast-done",
@@ -438,7 +491,7 @@ async def send_campaign_broadcast(campaign: CampaignInfo):
 # ─── Parse Members ──────────────────────────────────────────────────────────────
 
 @app.get("/parse/members")
-async def parse_members(group_username: str, limit: int = 500):
+async def parse_members(group_username: str, limit: int = 500, _key: str = Depends(verify_api_key)):
     try:
         if not client.is_connected():
             await client.connect()
@@ -467,7 +520,7 @@ async def parse_members(group_username: str, limit: int = 500):
 
 
 @app.get("/parse/dialogs")
-async def get_dialogs(limit: int = 200):
+async def get_dialogs(limit: int = 200, _key: str = Depends(verify_api_key)):
     try:
         if not client.is_connected():
             await client.connect()
@@ -481,7 +534,7 @@ async def get_dialogs(limit: int = 200):
             entity = dialog.entity
             if not isinstance(entity, (Channel, Chat)):
                 continue
-            if isinstance(entity, ChannelForbidden) or isinstance(entity, ChatForbidden):
+            if isinstance(entity, (ChannelForbidden, ChatForbidden)):
                 continue
 
             members_count = getattr(entity, "participants_count", None)
@@ -509,7 +562,7 @@ async def get_dialogs(limit: int = 200):
 
 
 @app.post("/parse/import-groups")
-async def import_groups(req: ImportGroupsRequest):
+async def import_groups(req: ImportGroupsRequest, _key: str = Depends(verify_api_key)):
     try:
         if not client.is_connected():
             await client.connect()
@@ -547,30 +600,6 @@ async def import_groups(req: ImportGroupsRequest):
     except Exception as e:
         logger.error(f"Import groups error: {e}")
         return {"success": False, "message": str(e), "imported": [], "failed": []}
-
-
-# ─── Startup ────────────────────────────────────────────────────────────────────
-
-@app.on_event("startup")
-async def startup():
-    try:
-        await client.connect()
-        logger.info("Telethon client connected")
-        if await client.is_user_authorized():
-            me = await client.get_me()
-            logger.info(f"Logged in as: {me.first_name} (@{me.username})")
-    except Exception as e:
-        logger.warning(f"Startup connect warning: {e}")
-
-    scheduler.start()
-    logger.info("Scheduler started")
-
-
-@app.on_event("shutdown")
-async def shutdown():
-    scheduler.shutdown()
-    if client.is_connected():
-        await client.disconnect()
 
 
 if __name__ == "__main__":

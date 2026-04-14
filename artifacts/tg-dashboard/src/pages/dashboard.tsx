@@ -32,8 +32,10 @@ export function Dashboard() {
         <p className="text-muted-foreground text-sm">Стан системи та активні задачі.</p>
       </div>
 
-      {/* Auth status banner */}
+      {/* Auth status banner — UX-07: accessible clickable element */}
       <div
+        role="button"
+        tabIndex={0}
         className="flex items-center justify-between p-3.5 rounded-2xl cursor-pointer transition-all"
         style={{
           background: authStatus?.authenticated
@@ -42,6 +44,8 @@ export function Dashboard() {
           border: `1px solid ${authStatus?.authenticated ? "hsl(271 91% 65% / 0.25)" : "hsl(316 90% 62% / 0.25)"}`,
         }}
         onClick={() => setShowAuth(true)}
+        onKeyDown={(e) => (e.key === "Enter" || e.key === " ") && setShowAuth(true)}
+        aria-label={authStatus?.authenticated ? "Акаунт підключено — натисніть для деталей" : "Натисніть для підключення Telegram акаунту"}
       >
         <div className="flex items-center gap-3">
           <div className="w-8 h-8 rounded-xl flex items-center justify-center"

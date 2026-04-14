@@ -58,6 +58,29 @@ parsing group members, and saving contacts — all from a user Telegram account.
 - `TELEGRAM_PHONE` — user phone number (+380...)
 - `DATABASE_URL` — auto-provisioned PostgreSQL
 - `SESSION_SECRET` — for session management
+- `INTERNAL_API_KEY` — shared secret between Node and Python services (auto-generated if not set)
+- `NODE_API_ORIGIN` — origin of Node API (used by Python CORS, default: http://localhost:8080)
+
+## Security Architecture
+
+- Python service requires `X-API-Key: <INTERNAL_API_KEY>` header on all endpoints
+- Node API injects this key via `pythonHeaders()` in `src/lib/config.ts`
+- CORS on Python limited to `NODE_API_ORIGIN` only (not wildcard)
+- All IDs validated via `parsedId()` helper — returns 400 on NaN inputs
+
+## Key Architecture Decisions
+
+- `PYTHON_SERVICE_URL` centralized in `artifacts/api-server/src/lib/config.ts`
+- Campaign start is atomic: Python is contacted BEFORE DB status is updated to "active"
+- join-status callback does UPDATE first, INSERT only if no existing record (avoids duplicate jobs)
+- Contact filtering uses SQL WHERE clause (not in-memory Node.js)
+- Parse timeout is 55s (below 60s proxy limit)
+- Auth modal race condition fixed: single useEffect for step initialization (no setTimeout fallback)
+- apiid/apihash UI steps removed — credentials must be set as env vars
+- `window.confirm()` replaced with AlertDialog (works in iframe/proxy environments)
+- Nested FormField with same name fixed with useWatch + direct form.setValue
+- FloodWait retry: same group retried after sleep, not skipped
+- Python uses lifespan event handlers (no DeprecationWarning)
 
 ## DB Schema
 

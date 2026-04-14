@@ -1,8 +1,7 @@
 import { Router } from "express";
+import { PYTHON_SERVICE_URL, pythonHeaders } from "../lib/config";
 
 const router = Router();
-
-const PYTHON_SERVICE_URL = process.env["PYTHON_SERVICE_URL"] || "http://localhost:8001";
 
 router.get("/search/groups", async (req, res) => {
   try {
@@ -15,7 +14,7 @@ router.get("/search/groups", async (req, res) => {
     if (groupType) params.set("groupType", groupType as string);
 
     const url = `${PYTHON_SERVICE_URL}/search/groups?${params.toString()}`;
-    const response = await fetch(url);
+    const response = await fetch(url, { headers: pythonHeaders() });
     const data = await response.json();
     res.json(data);
   } catch (err) {

@@ -2,10 +2,14 @@ import { Router } from "express";
 import { db } from "@workspace/db";
 import { campaignsTable, jobsTable } from "@workspace/db";
 import { eq, desc, sql } from "drizzle-orm";
+import { PYTHON_SERVICE_URL, pythonHeaders } from "../lib/config";
 
 const router = Router();
 
-const PYTHON_SERVICE_URL = process.env["PYTHON_SERVICE_URL"] || "http://localhost:8001";
+function parsedId(raw: string | undefined): number | null {
+  const id = parseInt(raw ?? "");
+  return isNaN(id) ? null : id;
+}
 
 router.get("/campaigns", async (req, res) => {
   try {
@@ -50,7 +54,8 @@ router.post("/campaigns", async (req, res) => {
 
 router.get("/campaigns/:id", async (req, res) => {
   try {
-    const id = parseInt(req.params["id"]!);
+    const id = parsedId(req.params["id"]);
+    if (id === null) { res.status(400).json({ error: "Invalid ID" }); return; }
     const [campaign] = await db.select().from(campaignsTable).where(eq(campaignsTable.id, id));
     if (!campaign) {
       res.status(404).json({ error: "Campaign not found" });
@@ -71,7 +76,8 @@ router.get("/campaigns/:id", async (req, res) => {
 
 router.put("/campaigns/:id", async (req, res) => {
   try {
-    const id = parseInt(req.params["id"]!);
+    const id = parsedId(req.params["id"]);
+    if (id === null) { res.status(400).json({ error: "Invalid ID" }); return; }
     const { name, message, scheduleType, intervalHours, targetGroupIds, status } = req.body;
     const update: Record<string, unknown> = {};
     if (name !== undefined) update["name"] = name;
@@ -100,7 +106,8 @@ router.put("/campaigns/:id", async (req, res) => {
 
 router.delete("/campaigns/:id", async (req, res) => {
   try {
-    const id = parseInt(req.params["id"]!);
+    const id = parsedId(req.params["id"]);
+    if (id === null) { res.status(400).json({ error: "Invalid ID" }); return; }
     await db.delete(campaignsTable).where(eq(campaignsTable.id, id));
     res.json({ success: true, message: "Campaign deleted" });
   } catch (err) {
@@ -111,22 +118,22 @@ router.delete("/campaigns/:id", async (req, res) => {
 
 router.post("/campaigns/:id/start", async (req, res) => {
   try {
-    const id = parseInt(req.params["id"]!);
+    const id = parsedId(req.params["id"]);
+    if (id === null) { res.status(400).json({ success: false, message: "Invalid ID" }); return; }
+
     const [campaign] = await db.select().from(campaignsTable).where(eq(campaignsTable.id, id));
     if (!campaign) {
       res.status(404).json({ success: false, message: "Campaign not found" });
       return;
     }
 
-    await db.update(campaignsTable)
-      .set({ status: "active", nextRunAt: new Date() })
-      .where(eq(campaignsTable.id, id));
-
+    // B-01: Verify Python service is reachable BEFORE marking campaign active
+    const { delaySeconds = 5 } = req.body;
+    let pythonResponse: Response;
     try {
-      const { delaySeconds = 5 } = req.body;
-      const response = await fetch(`${PYTHON_SERVICE_URL}/campaigns/start`, {
+      pythonResponse = await fetch(`${PYTHON_SERVICE_URL}/campaigns/start`, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: pythonHeaders(),
         body: JSON.stringify({
           campaign: {
             ...campaign,
@@ -135,12 +142,20 @@ router.post("/campaigns/:id/start", async (req, res) => {
             delaySeconds,
           }
         }),
+        signal: AbortSignal.timeout(10000),
       });
-      const data = await response.json();
-      res.json({ success: true, message: "Campaign started", jobIds: data.jobIds ?? null });
     } catch (_) {
-      res.json({ success: true, message: "Campaign activated (bot service not available)", jobIds: null });
+      res.status(503).json({ success: false, message: "Bot service is not available. Campaign not started." });
+      return;
     }
+
+    // Only update DB status after successful Python response
+    await db.update(campaignsTable)
+      .set({ status: "active", nextRunAt: new Date() })
+      .where(eq(campaignsTable.id, id));
+
+    const data = await pythonResponse.json();
+    res.json({ success: true, message: "Campaign started", jobIds: data.jobIds ?? null });
   } catch (err) {
     req.log.error({ err }, "Start campaign error");
     res.status(500).json({ success: false, message: "Failed to start campaign" });
@@ -149,7 +164,9 @@ router.post("/campaigns/:id/start", async (req, res) => {
 
 router.post("/campaigns/:id/pause", async (req, res) => {
   try {
-    const id = parseInt(req.params["id"]!);
+    const id = parsedId(req.params["id"]);
+    if (id === null) { res.status(400).json({ success: false, message: "Invalid ID" }); return; }
+
     await db.update(campaignsTable)
       .set({ status: "paused" })
       .where(eq(campaignsTable.id, id));
@@ -157,8 +174,9 @@ router.post("/campaigns/:id/pause", async (req, res) => {
     try {
       await fetch(`${PYTHON_SERVICE_URL}/campaigns/pause`, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: pythonHeaders(),
         body: JSON.stringify({ campaignId: id }),
+        signal: AbortSignal.timeout(5000),
       });
     } catch (_) {}
 
@@ -171,7 +189,8 @@ router.post("/campaigns/:id/pause", async (req, res) => {
 
 router.post("/campaigns/:id/broadcast-done", async (req, res) => {
   try {
-    const id = parseInt(req.params["id"]!);
+    const id = parsedId(req.params["id"]);
+    if (id === null) { res.status(400).json({ success: false }); return; }
     const { sent, failed } = req.body;
     await db.update(campaignsTable)
       .set({

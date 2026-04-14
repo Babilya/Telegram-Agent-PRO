@@ -1,15 +1,16 @@
 import { Router } from "express";
 import { db } from "@workspace/db";
 import { parsedContactsTable } from "@workspace/db";
-import { desc, ilike, eq, and, or } from "drizzle-orm";
+import { desc, ilike, eq, and, or, count } from "drizzle-orm";
 
 const router = Router();
 
 router.get("/contacts", async (req, res) => {
   try {
     const { search, sourceGroup } = req.query;
+    const limit = Math.min(parseInt((req.query["limit"] as string) || "200", 10), 1000);
+    const offset = Math.max(parseInt((req.query["offset"] as string) || "0", 10), 0);
 
-    // B-03: Push filtering into SQL instead of loading all rows into memory
     const conditions = [];
 
     if (search) {
@@ -29,18 +30,21 @@ router.get("/contacts", async (req, res) => {
       conditions.push(eq(parsedContactsTable.sourceGroup, sourceGroup as string));
     }
 
-    const contacts = conditions.length > 0
-      ? await db
-          .select()
-          .from(parsedContactsTable)
-          .where(conditions.length === 1 ? conditions[0] : and(...conditions))
-          .orderBy(desc(parsedContactsTable.createdAt))
-      : await db
-          .select()
-          .from(parsedContactsTable)
-          .orderBy(desc(parsedContactsTable.createdAt));
+    const whereClause = conditions.length > 0
+      ? (conditions.length === 1 ? conditions[0] : and(...conditions))
+      : undefined;
 
-    res.json({ contacts, total: contacts.length });
+    const [contacts, totalResult] = await Promise.all([
+      whereClause
+        ? db.select().from(parsedContactsTable).where(whereClause).orderBy(desc(parsedContactsTable.createdAt)).limit(limit).offset(offset)
+        : db.select().from(parsedContactsTable).orderBy(desc(parsedContactsTable.createdAt)).limit(limit).offset(offset),
+      whereClause
+        ? db.select({ count: count() }).from(parsedContactsTable).where(whereClause)
+        : db.select({ count: count() }).from(parsedContactsTable),
+    ]);
+
+    const total = totalResult[0]?.count ?? 0;
+    res.json({ contacts, total, limit, offset });
   } catch (err) {
     req.log.error({ err }, "List contacts error");
     res.status(500).json({ contacts: [], total: 0 });

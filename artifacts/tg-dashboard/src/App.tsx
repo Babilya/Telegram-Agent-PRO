@@ -1,5 +1,5 @@
-import { Switch, Route, Router as WouterRouter, Redirect } from "wouter";
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { Switch, Route, Router as WouterRouter, useLocation } from "wouter";
+import { QueryClient, QueryClientProvider, useQueryClient } from "@tanstack/react-query";
 import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
 
@@ -14,36 +14,73 @@ import Jobs from "@/pages/jobs";
 import Parsers from "@/pages/parsers";
 import Settings from "@/pages/settings";
 import NotFound from "@/pages/not-found";
+import { AuthModal } from "@/components/auth/auth-modal";
+import { useGetAuthStatus, getGetAuthStatusQueryKey } from "@workspace/api-client-react";
+import { Loader2 } from "lucide-react";
 
 const queryClient = new QueryClient();
+
+function ProtectedRoute({ children }: { children: React.ReactNode }) {
+  const [, navigate] = useLocation();
+  const qc = useQueryClient();
+
+  const { data, isLoading } = useGetAuthStatus({
+    query: { staleTime: 30_000 },
+  });
+
+  if (isLoading) {
+    return (
+      <Layout>
+        <div className="flex items-center justify-center py-24">
+          <Loader2 className="h-8 w-8 animate-spin text-primary" />
+        </div>
+      </Layout>
+    );
+  }
+
+  const isAuthenticated = data?.authenticated === true;
+
+  if (!isAuthenticated) {
+    return (
+      <AuthModal
+        onClose={() => navigate("/welcome")}
+        onSuccess={() => {
+          qc.invalidateQueries({ queryKey: getGetAuthStatusQueryKey() });
+        }}
+      />
+    );
+  }
+
+  return <Layout>{children}</Layout>;
+}
 
 function Router() {
   return (
     <Switch>
       <Route path="/welcome" component={Landing} />
       <Route path="/dashboard">
-        <Layout><Dashboard /></Layout>
+        <ProtectedRoute><Dashboard /></ProtectedRoute>
       </Route>
       <Route path="/search">
-        <Layout><Search /></Layout>
+        <ProtectedRoute><Search /></ProtectedRoute>
       </Route>
       <Route path="/groups">
-        <Layout><Groups /></Layout>
+        <ProtectedRoute><Groups /></ProtectedRoute>
       </Route>
       <Route path="/campaigns/new">
-        <Layout><CampaignForm /></Layout>
+        <ProtectedRoute><CampaignForm /></ProtectedRoute>
       </Route>
       <Route path="/campaigns/:id/edit">
-        <Layout><CampaignForm /></Layout>
+        <ProtectedRoute><CampaignForm /></ProtectedRoute>
       </Route>
       <Route path="/campaigns">
-        <Layout><Campaigns /></Layout>
+        <ProtectedRoute><Campaigns /></ProtectedRoute>
       </Route>
       <Route path="/jobs">
-        <Layout><Jobs /></Layout>
+        <ProtectedRoute><Jobs /></ProtectedRoute>
       </Route>
       <Route path="/parsers">
-        <Layout><Parsers /></Layout>
+        <ProtectedRoute><Parsers /></ProtectedRoute>
       </Route>
       <Route path="/settings">
         <Layout><Settings /></Layout>

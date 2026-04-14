@@ -72,15 +72,21 @@ parsing group members, and saving contacts — all from a user Telegram account.
 
 - `PYTHON_SERVICE_URL` centralized in `artifacts/api-server/src/lib/config.ts`
 - Campaign start is atomic: Python is contacted BEFORE DB status is updated to "active"
+- **Campaign recovery**: on API server startup, active campaigns are re-registered with Python (handles restarts)
 - join-status callback does UPDATE first, INSERT only if no existing record (avoids duplicate jobs)
 - Contact filtering uses SQL WHERE clause (not in-memory Node.js)
+- Contacts endpoint is paginated: `limit` (max 1000, default 200) + `offset` params
+- **Rate limiting**: 300 req/min per IP via express-rate-limit; `/api/health` is exempt
+- Express `trust proxy` set to `1` so rate-limit works correctly behind Replit's reverse proxy
 - Parse timeout is 55s (below 60s proxy limit)
 - Auth modal race condition fixed: single useEffect for step initialization (no setTimeout fallback)
+- **Auth guard**: all inner routes check `/api/auth/status`; unauthenticated users see auth modal
 - apiid/apihash UI steps removed — credentials must be set as env vars
 - `window.confirm()` replaced with AlertDialog (works in iframe/proxy environments)
 - Nested FormField with same name fixed with useWatch + direct form.setValue
 - FloodWait retry: same group retried after sleep, not skipped
 - Python uses lifespan event handlers (no DeprecationWarning)
+- DB indexes added on: `groups.status`, `jobs.status`, `jobs.campaign_id`, `jobs.created_at`, `parsed_contacts.source_group`, `parsed_contacts.created_at`, `parsed_contacts.telegram_id`
 
 ## DB Schema
 
@@ -143,7 +149,7 @@ parsing group members, and saving contacts — all from a user Telegram account.
 - `POST /api/parse/import-groups` — resolve usernames + save to DB
 
 ### Contacts
-- `GET /api/contacts?search=&sourceGroup=` — list saved contacts
+- `GET /api/contacts?search=&sourceGroup=&limit=&offset=` — list saved contacts (paginated, max 1000/page, default 200)
 - `POST /api/contacts/batch` — save multiple contacts to DB
 - `DELETE /api/contacts/all` — clear all contacts
 

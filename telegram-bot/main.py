@@ -30,6 +30,9 @@ from telethon.errors import (
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
 from apscheduler.triggers.interval import IntervalTrigger
 
+from shadow_handlers import register_handlers, shadow_router
+from bot_menu import register_menu
+
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
@@ -70,11 +73,71 @@ async def lifespan(app: FastAPI):
         if await client.is_user_authorized():
             me = await client.get_me()
             logger.info(f"Logged in as: {me.first_name} (@{me.username})")
+        try:
+            register_handlers(client)
+        except Exception as e:
+            logger.warning(f"Failed to register SHADOW handlers: {e}")
+        try:
+            register_menu(client)
+        except Exception as e:
+            logger.warning(f"Failed to register userbot menu: {e}")
     except Exception as e:
         logger.warning(f"Startup connect warning: {e}")
 
     scheduler.start()
     logger.info("Scheduler started")
+
+    # Hourly "last seen long ago" notifier (>30 days inactive contacts).
+    try:
+        scheduler.add_job(
+            check_inactive_contacts,
+            IntervalTrigger(hours=1),
+            id="last_seen_check",
+            replace_existing=True,
+            misfire_grace_time=600,
+            next_run_time=datetime.now(),
+        )
+        logger.info("Scheduled inactive-contacts check (hourly)")
+    except Exception as e:
+        logger.warning(f"Failed to schedule inactive-check: {e}")
+
+    # Restore active campaigns so jobs survive restarts (DB is the source of truth).
+    try:
+        import httpx as _httpx
+        async with _httpx.AsyncClient(timeout=8.0) as _http:
+            r = await _http.get(f"{NODE_API_URL}/api/campaigns")
+            data = r.json()
+            for c in data.get("campaigns", []):
+                if c.get("status") != "running":
+                    continue
+                try:
+                    camp = CampaignInfo(
+                        id=c["id"], name=c.get("name", ""), message=c.get("message", ""),
+                        status=c.get("status", "running"),
+                        scheduleType=c.get("scheduleType", "hourly"),
+                        intervalHours=c.get("intervalHours"),
+                        targetGroupIds=c.get("targetGroupIds", []) or [],
+                        delaySeconds=c.get("delaySeconds", 5),
+                    )
+                    if camp.scheduleType == "once":
+                        continue
+                    schedule_map = {
+                        "hourly": 1.0, "every2h": 2.0, "every4h": 4.0,
+                        "every8h": 8.0, "every12h": 12.0, "daily": 24.0,
+                        "custom": camp.intervalHours,
+                    }
+                    hours = schedule_map.get(camp.scheduleType) or 1.0
+                    job = scheduler.add_job(
+                        send_campaign_broadcast, IntervalTrigger(hours=hours),
+                        args=[camp], id=f"campaign_{camp.id}",
+                        replace_existing=True, misfire_grace_time=3600,
+                    )
+                    active_campaign_jobs[camp.id] = job.id
+                    logger.info(f"Restored campaign {camp.id} ({camp.scheduleType})")
+                except Exception as ce:
+                    logger.warning(f"Failed to restore campaign {c.get('id')}: {ce}")
+    except Exception as e:
+        logger.warning(f"Campaign restore skipped: {e}")
 
     yield
 
@@ -92,6 +155,7 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+app.include_router(shadow_router)
 
 
 # ─── Models ─────────────────────────────────────────────────────────────────────
@@ -139,6 +203,51 @@ class ImportGroupsRequest(BaseModel):
 
 
 # ─── Helpers ─────────────────────────────────────────────────────────────────────
+
+async def check_inactive_contacts():
+    """Notify owner about contacts not seen in >30 days. Runs hourly."""
+    import httpx as _httpx
+    from datetime import timedelta
+    try:
+        async with _httpx.AsyncClient(timeout=15.0) as http:
+            r = await http.get(f"{NODE_API_URL}/api/profiles")
+            data = r.json()
+        threshold = datetime.now() - timedelta(days=30)
+        stale = []
+        for p in data.get("profiles", []):
+            ls = p.get("lastSeen")
+            if not ls:
+                continue
+            try:
+                ts = datetime.fromisoformat(ls.replace("Z", "+00:00")).replace(tzinfo=None)
+            except Exception:
+                continue
+            if ts < threshold and (p.get("notes") or "").find("inactive_notified") < 0:
+                stale.append(p)
+        if not stale:
+            return
+        # Notify in Saved Messages (one bundled message; 5 max per hour).
+        bundle = stale[:5]
+        msg = "⚠️ Контакти неактивні >30 днів:\n" + "\n".join(
+            f"• {p.get('firstName') or p.get('username') or p.get('telegramId')} "
+            f"(остання активність {p.get('lastSeen', '?')[:10]})"
+            for p in bundle
+        )
+        try:
+            await client.send_message("me", msg)
+        except Exception as e:
+            logger.warning(f"inactive notify send failed: {e}")
+        # Mark as notified so we don't spam.
+        async with _httpx.AsyncClient(timeout=15.0) as http:
+            for p in bundle:
+                notes = (p.get("notes") or "") + " inactive_notified"
+                try:
+                    await http.patch(f"{NODE_API_URL}/api/profiles/{p['id']}", json={"notes": notes.strip()})
+                except Exception:
+                    pass
+    except Exception as e:
+        logger.error(f"check_inactive_contacts error: {e}")
+
 
 async def resolve_entity(username: Optional[str], telegram_id: Optional[str]):
     """
@@ -405,7 +514,8 @@ async def start_campaign(req: StartCampaignRequest, background_tasks: Background
             args=[campaign],
             id=f"campaign_{campaign.id}",
             replace_existing=True,
-            next_run_time=datetime.now()
+            next_run_time=datetime.now(),
+            misfire_grace_time=3600,
         )
         active_campaign_jobs[campaign.id] = job.id
 

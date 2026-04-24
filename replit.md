@@ -1,10 +1,31 @@
-# Telegram Group Manager — GROUP AGENT
+# SHADOW AGENT PRO v3.8 — Telegram Group Manager
 
 ## Overview
 
-Full-stack Telegram marketing tool: Python bot (Telethon) + Node.js API + React web dashboard.
-Allows searching Telegram groups, auto-joining channels, running scheduled broadcast campaigns,
-parsing group members, and saving contacts — all from a user Telegram account.
+Full-stack Telegram юзербот SHADOW AGENT PRO: Python bot (Telethon) + Node.js API + React web dashboard.
+Includes 14 модулів: розсилки, моніторинг, логи, досьє контактів, автовідповіді, пересилання,
+пошук груп, вступ у групи, OCR, голосові→текст, дзеркала, статистика, налаштування, підтримка.
+Plus reference catalog with FAQ, error codes (E001-E012), full guide and security policy.
+
+## Modules / Pages
+
+- `/dashboard` — Огляд (stats + activity)
+- `/campaigns` — Розсилки
+- `/monitor` — Моніторинг ключових слів
+- `/logs` — Логи (повідомлення, медіа, видалені)
+- `/contacts` — Досьє контактів
+- `/autoreplies` — Автовідповіді (тригер→відповідь)
+- `/forwarding` — Пересилання
+- `/search`, `/groups`, `/parsers` — Групи
+- `/ocr` — OCR (фото→текст)
+- `/voice` — Голосові→текст (Whisper)
+- `/mirrors` — Дзеркала бота
+- `/stats` — Статистика
+- `/support` — Підтримка
+- `/profile` — Мій профіль
+- `/help` — Довідковий каталог (Каталог/Швидко/Гід/FAQ/Помилки/Безпека)
+- `/menu` — Хаб усіх модулів
+- `/settings` — Налаштування
 
 ## Stack
 
@@ -179,3 +200,76 @@ parsing group members, and saving contacts — all from a user Telegram account.
 - Sub: `hsl(258 15% 70%)`
 - Dim: `hsl(258 15% 52%)`
 - Fonts: Unbounded (display), Inter (body), JetBrains Mono (mono)
+
+## SHADOW v3.8 backend wiring (2026-04-22)
+All 8 SHADOW pages now use real PostgreSQL via `/api/*` endpoints:
+- `monitor` → `/api/keywords` (CRUD, 5s polling)
+- `autoreplies` → `/api/autoreplies` (CRUD, 5s polling)
+- `forwarding` → `/api/forwarding` (CRUD, 5s polling)
+- `mirrors` → `/api/mirrors` (auto-generated access keys)
+- `support` → `/api/support` (tickets with replies)
+- `ocr` → `/api/ocr/recognize` (multipart → Python tesseract ukr+eng)
+- `voice` → `/api/voice/transcribe` (multipart → Python faster-whisper tiny)
+- `logs` → `/api/logs?eventType=` (filters: all/media/edited/deleted)
+
+Bot side: `telegram-bot/shadow_handlers.py` registers `events.NewMessage`, `events.MessageEdited`, `events.MessageDeleted` — each event POSTs to Node API for log + checks active keywords/forward filters and upserts contact profile. FastAPI sub-router on :8001 hosts `/ocr/recognize` and `/voice/transcribe`.
+
+Direct fetch helper: `artifacts/tg-dashboard/src/lib/shadow-api.ts` (no codegen for these endpoints — free tier optimization).
+
+## Update — Stage 1 critical fixes + Stage 2 userbot menu (Apr 23, 2026)
+
+### Stage 1 — critical fixes done
+- **TTL cache** for `_fetch_keywords/autoreplies/forward_filters` in `telegram-bot/cache.py` (30 s default; tunable via `SHADOW_CACHE_TTL` env). Eliminates ~3 HTTP GETs per inbound message.
+- **`hits` counter actually increments**: new endpoints `POST /api/{keywords|autoreplies|forwarding}/:id/hit` use `sql\`col + 1\``. Bot fires `_post_hit()` as a background task on every match.
+- **Scheduler restore**: on startup, bot pulls active campaigns from `/api/campaigns` and re-adds APScheduler jobs with `misfire_grace_time=3600`. No external jobstore dep needed.
+- **Encryption helper** `telegram-bot/crypto_utils.py` (Fernet) ready for any future sensitive field; falls back to deterministic dev key derived from `TELEGRAM_API_HASH`.
+- **Session file** `telegram-bot/session/user_session.session` chmod 600.
+
+### Stage 2 — userbot text menu (variant Б)
+- New module `telegram-bot/bot_menu.py` registered in `Saved Messages`.
+- Inline keyboards in **userbots are not supported by Telegram MTProto** — only BotFather bots can do callback_query. Implemented as text commands instead.
+- Commands available by sending in Saved Messages:
+  - `/menu`, `/help`, `/stats`
+  - `/keywords`, `/add_kw <word>`, `/del_kw <id>`
+  - `/autoreplies`, `/add_ar <trigger>|<reply>`, `/del_ar <id>`
+  - `/forwarding`, `/add_fw <src>|<dst>[|<keyword>]`, `/del_fw <id>`
+  - `/mirrors`, `/logs [n]`, `/clear_logs`
+  - `/support <subj>|<msg>`
+- Cache invalidation hooks: every add/delete command calls `cache.invalidate(<key>)`.
+
+### Still pending (Stages 3–4)
+- E012 cancel-limit counter
+- "Last seen long ago" cron + notification
+- Photo self-destruct save
+- CSV export button on logs page
+- Spawn isolated Telethon sub-client per mirror
+- pytest suite (`test_broadcast.py`, `test_monitor.py`, `test_helpers.py`)
+- Optional Stage 2 variant А: separate BotFather bot for inline keyboards
+
+## Update — Stage 3 features (Apr 23, 2026)
+
+### Done
+- **CSV export of logs** — new "CSV" button in `logs.tsx` exports current selection (BOM-prefixed UTF-8, RFC 4180 escaping).
+- **"Last seen >30 days" cron** — `check_inactive_contacts()` runs hourly; sends bundled (max 5) notification to Saved Messages, marks profiles with `inactive_notified` flag in `notes` to avoid spam.
+- **Self-destruct media save** — in `shadow_handlers.on_new_message` we detect `msg.media.ttl_seconds`, immediately download the photo to `telegram-bot/media/` and store the path in `messageLogs.mediaPath`.
+- **E012 cancel counter** — new table `cancel_counters (user_key, count, window_start, blocked_until)`. Endpoints:
+  - `GET  /api/cancel/:userKey/check`
+  - `POST /api/cancel/:userKey/inc`  → returns `{blocked, count, limit, message}` with E012 text when limit (10/24h) reached; auto-blocks for 1h.
+  - `POST /api/cancel/:userKey/reset`
+- **Mirror credentials storage** — `mirrors` table now has `apiId` (int), `apiHashEnc` (Fernet ciphertext from `crypto_utils.py`), `sessionString` (StringSession), `status` (`idle | configured | running | error`). `POST /api/mirrors` accepts `apiId/apiHashEnc`; new `PATCH /api/mirrors/:id` for updates.
+
+### Known limitation
+Spawning a real isolated Telethon sub-client per mirror requires phone+code+2FA verification flow, which has no UI yet. Credentials are persisted (encrypted) and ready — the actual `MirrorClient` runtime can be added once the dashboard provides the auth UI.
+
+## Update — Stage 4 tests (Apr 23, 2026)
+
+### Test suite added
+- `telegram-bot/tests/test_helpers.py` — TTL cache (concurrency, expiry, invalidate) + Fernet roundtrip.
+- `telegram-bot/tests/test_monitor.py` — `_fetch_*` HTTP fetching with mocked `httpx`, `_post_hit` fire-and-forget, cache deduplication.
+- `telegram-bot/tests/test_broadcast.py` — schedule map for campaigns, bot_menu regex command parsing, inactive-contacts filter.
+- `telegram-bot/pytest.ini` — asyncio_mode=auto.
+
+Run: `cd telegram-bot && python -m pytest -v` → **28/28 passed in ~3.5s**.
+
+### Why these tests
+These cover the stable, deterministic units. End-to-end Telethon event tests require a live Telegram session and are out of scope; instead, all HTTP contracts and pure logic are mocked and verified.

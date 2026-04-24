@@ -315,3 +315,30 @@ All three "залишилось як опційні розширення" items 
 ### Files added / modified
 - new: `telegram-bot/mirror_manager.py`, `telegram-bot/inline_bot.py`, `telegram-bot/tests/test_integration.py`
 - modified: `telegram-bot/main.py` (mirror endpoints, inline bot lifecycle), `lib/db/src/schema/shadow.ts` (`phone` column), `artifacts/api-server/src/routes/shadow.ts` (auth proxy + `phone` in PATCH), `artifacts/tg-dashboard/src/lib/shadow-api.ts` (mirror auth helpers), `artifacts/tg-dashboard/src/pages/mirrors.tsx` (auth dialog flow).
+
+## Update — Stage 6 audit & polish (Apr 24, 2026)
+
+Full-stack audit + new infrastructure pages.
+
+### New backend endpoints
+- `GET /api/system/health` — aggregate system status: api-server uptime, python-service reachability, Telegram-client auth state, inline bot status, mirror count, encryption mode, last test run.
+- `GET /api/system/jobs` — proxies Python `/system/jobs`; returns all APScheduler jobs with `nextRun`, `trigger`, `func`, plus `schedulerRunning` and `activeCampaigns`.
+- Python: `/system/info`, `/system/jobs` (`telegram-bot/main.py`).
+
+### New dashboard pages
+- **`/system` — «Система»** (`pages/system.tsx`): 6-tile health grid (API server, Python service, Telegram client, inline bot, encryption, active mirrors) + last-test summary + env detail rows. Polls every 5 s.
+- **`/activity` — «Активність»** (`pages/activity.tsx`): unified live event stream from `/api/logs`. 7 filter chips with per-type counters (monitoring hits, autoreplies, forwarding, OCR, voice, support). Polls every 4 s.
+- **`/scheduler` — «Розклад»** (`pages/scheduler.tsx`): visualises all APScheduler jobs with countdowns ("за 12 хв 30 с"), trigger description ("кожні 1 год", "разово"), campaign badge for active broadcast jobs. Polls every 3 s.
+
+### Sidebar nav
+- New section **«Інфраструктура»** with `Система` and `Розклад`.
+- **«Активність»** added inside **«Аналітика»**.
+
+### Help page polish (`pages/help.tsx`)
+- Errors registry extended: **E013** (mirror code invalid), **E014** (mirror 2FA failed), **E015** (mirror session lost).
+- FAQ rewritten and extended from 10 → 14 entries: explicit mention of Fernet encryption, deployment cost reality, the new inline bot, and tours of the three new pages (`/system`, `/scheduler`, `/activity`).
+
+### Verification
+- Tests: `cd telegram-bot && python -m pytest -v` → **33/33 passed**.
+- Live endpoints checked: `/api/system/health`, `/api/system/jobs`, mirror auth proxy chain.
+- All four workflows green; inline bot live as `@home_prembot`.

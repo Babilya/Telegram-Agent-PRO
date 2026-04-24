@@ -27,6 +27,9 @@ import Support from "@/pages/support";
 import Profile from "@/pages/profile";
 import Help from "@/pages/help";
 import MenuPage from "@/pages/menu";
+import SystemPage from "@/pages/system";
+import ActivityPage from "@/pages/activity";
+import SchedulerPage from "@/pages/scheduler";
 import { AuthModal } from "@/components/auth/auth-modal";
 import { useGetAuthStatus, getGetAuthStatusQueryKey } from "@workspace/api-client-react";
 import { Loader2 } from "lucide-react";
@@ -89,6 +92,9 @@ const protectedRoutes: { path: string; component: React.ComponentType }[] = [
   { path: "/profile", component: Profile },
   { path: "/help", component: Help },
   { path: "/menu", component: MenuPage },
+  { path: "/system", component: SystemPage },
+  { path: "/activity", component: ActivityPage },
+  { path: "/scheduler", component: SchedulerPage },
 ];
 
 function Router() {

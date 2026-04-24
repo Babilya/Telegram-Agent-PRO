@@ -2,7 +2,7 @@ import { Link, useLocation } from "wouter";
 import {
   LayoutDashboard, Search, Users, Megaphone, Activity, ShieldCheck, ShieldAlert, X, Zap,
   Eye, ScrollText, FolderOpen, Bot, Forward, Camera, Mic, Copy, BarChart3, MessageCircle,
-  User, BookOpen, Settings as SettingsIcon, FileText,
+  User, BookOpen, Settings as SettingsIcon, FileText, Cpu, CalendarClock, Radio,
 } from "lucide-react";
 import { useGetAuthStatus, getGetAuthStatusQueryKey } from "@workspace/api-client-react";
 
@@ -39,7 +39,15 @@ const sections: { title: string; items: { name: string; href: string; icon: any 
     title: "Аналітика",
     items: [
       { name: "Статистика", href: "/stats", icon: BarChart3 },
+      { name: "Активність", href: "/activity", icon: Radio },
       { name: "Історія задач", href: "/jobs", icon: Activity },
+    ],
+  },
+  {
+    title: "Інфраструктура",
+    items: [
+      { name: "Система", href: "/system", icon: Cpu },
+      { name: "Розклад", href: "/scheduler", icon: CalendarClock },
     ],
   },
   {

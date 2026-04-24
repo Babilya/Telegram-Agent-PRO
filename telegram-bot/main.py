@@ -233,6 +233,58 @@ async def mirror_status(mirror_id: int):
     return mirror_mgr.get_status(mirror_id)
 
 
+# ─── System introspection ───────────────────────────────────────────────────────
+
+@app.get("/system/jobs")
+async def list_scheduler_jobs():
+    """Return all apscheduler jobs with their next run times."""
+    jobs = []
+    for j in scheduler.get_jobs():
+        try:
+            next_run = j.next_run_time.isoformat() if j.next_run_time else None
+        except Exception:
+            next_run = None
+        jobs.append({
+            "id": j.id,
+            "name": j.name or j.id,
+            "trigger": str(j.trigger),
+            "nextRun": next_run,
+            "func": getattr(j.func, "__name__", str(j.func)),
+        })
+    return {
+        "jobs": jobs,
+        "schedulerRunning": scheduler.running,
+        "activeCampaigns": list(active_campaign_jobs.keys()),
+    }
+
+
+@app.get("/system/info")
+async def system_info():
+    """Lightweight runtime status: tg client, inline bot, mirror count."""
+    tg_connected = False
+    tg_authorized = False
+    me = None
+    try:
+        if client.is_connected():
+            tg_connected = True
+            if await client.is_user_authorized():
+                tg_authorized = True
+                u = await client.get_me()
+                me = {"id": u.id, "username": u.username, "firstName": u.first_name}
+    except Exception:
+        pass
+
+    inline_running = inline_bot._task is not None and not inline_bot._task.done()
+    mirror_states = {mid: mirror_mgr.get_status(mid) for mid in list(mirror_mgr._states.keys())}
+
+    return {
+        "telegram": {"connected": tg_connected, "authorized": tg_authorized, "me": me},
+        "inlineBot": {"enabled": bool(os.environ.get("TELEGRAM_BOT_TOKEN")), "running": inline_running},
+        "mirrors": {"active": len(mirror_mgr._states), "states": mirror_states},
+        "encryption": {"configured": bool(os.environ.get("SHADOW_ENCRYPTION_KEY"))},
+    }
+
+
 # ─── Models ─────────────────────────────────────────────────────────────────────
 
 class SendCodeRequest(BaseModel):

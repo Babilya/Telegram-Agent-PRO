@@ -34,6 +34,15 @@ export const shadowApi = {
   listMirrors: () => j<{ mirrors: any[] }>("/mirrors"),
   addMirror: (data: { ownerName: string; ownerTelegramId: string }) => j("/mirrors", { method: "POST", body: JSON.stringify(data) }),
   deleteMirror: (id: number) => j(`/mirrors/${id}`, { method: "DELETE" }),
+  mirrorSendCode: (id: number, data: { apiId: number; apiHash: string; phone: string }) =>
+    j(`/mirrors/${id}/auth/send-code`, { method: "POST", body: JSON.stringify(data) }),
+  mirrorVerifyCode: (id: number, code: string) =>
+    j<{ status: string; needPassword?: boolean }>(`/mirrors/${id}/auth/verify-code`, { method: "POST", body: JSON.stringify({ code }) }),
+  mirrorVerifyPassword: (id: number, password: string) =>
+    j<{ status: string }>(`/mirrors/${id}/auth/verify-password`, { method: "POST", body: JSON.stringify({ password }) }),
+  mirrorStart: (id: number) => j<{ status: string }>(`/mirrors/${id}/start`, { method: "POST" }),
+  mirrorStop: (id: number) => j<{ status: string }>(`/mirrors/${id}/stop`, { method: "POST" }),
+  mirrorStatus: (id: number) => j<{ status: string; running: boolean; phone?: string; error?: string }>(`/mirrors/${id}/status`),
 
   // Logs
   listLogs: (eventType?: string, limit = 100) => j<{ logs: any[] }>(`/logs?limit=${limit}${eventType && eventType !== "all" ? `&eventType=${eventType}` : ""}`),

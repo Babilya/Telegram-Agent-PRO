@@ -52,6 +52,7 @@ export const mirrorsTable = pgTable("mirrors", {
   apiId: integer("api_id"),
   apiHashEnc: text("api_hash_enc"),
   sessionString: text("session_string"),
+  phone: text("phone"),
   status: text("status").notNull().default("idle"),
   createdAt: timestamp("created_at").defaultNow().notNull(),
 });

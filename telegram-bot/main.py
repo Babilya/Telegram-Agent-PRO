@@ -32,6 +32,8 @@ from apscheduler.triggers.interval import IntervalTrigger
 
 from shadow_handlers import register_handlers, shadow_router
 from bot_menu import register_menu
+from mirror_manager import manager as mirror_mgr
+import inline_bot
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -139,9 +141,14 @@ async def lifespan(app: FastAPI):
     except Exception as e:
         logger.warning(f"Campaign restore skipped: {e}")
 
+    # Start optional BotFather inline-keyboard companion
+    inline_bot.start_in_background()
+
     yield
 
     scheduler.shutdown()
+    await mirror_mgr.shutdown_all()
+    await inline_bot.shutdown()
     if client.is_connected():
         await client.disconnect()
 
@@ -156,6 +163,74 @@ app.add_middleware(
     allow_headers=["*"],
 )
 app.include_router(shadow_router)
+
+
+# ─── Mirror auth endpoints ──────────────────────────────────────────────────────
+
+class MirrorSendCodeReq(BaseModel):
+    apiId: int
+    apiHash: str
+    phone: str
+
+
+class MirrorVerifyCodeReq(BaseModel):
+    code: str
+
+
+class MirrorVerifyPasswordReq(BaseModel):
+    password: str
+
+
+class MirrorStartReq(BaseModel):
+    apiId: int
+    apiHashEnc: str
+    sessionString: str
+    phone: Optional[str] = ""
+
+
+@app.post("/mirrors/{mirror_id}/auth/send-code")
+async def mirror_send_code(mirror_id: int, req: MirrorSendCodeReq):
+    try:
+        return await mirror_mgr.send_code(mirror_id, req.apiId, req.apiHash, req.phone)
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=str(e))
+
+
+@app.post("/mirrors/{mirror_id}/auth/verify-code")
+async def mirror_verify_code(mirror_id: int, req: MirrorVerifyCodeReq):
+    try:
+        return await mirror_mgr.verify_code(mirror_id, req.code)
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=str(e))
+
+
+@app.post("/mirrors/{mirror_id}/auth/verify-password")
+async def mirror_verify_password(mirror_id: int, req: MirrorVerifyPasswordReq):
+    try:
+        return await mirror_mgr.verify_password(mirror_id, req.password)
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=str(e))
+
+
+@app.post("/mirrors/{mirror_id}/start")
+async def mirror_start(mirror_id: int, req: MirrorStartReq):
+    try:
+        return await mirror_mgr.start(mirror_id, req.apiId, req.apiHashEnc, req.sessionString, req.phone or "")
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=str(e))
+
+
+@app.post("/mirrors/{mirror_id}/stop")
+async def mirror_stop(mirror_id: int):
+    try:
+        return await mirror_mgr.stop(mirror_id)
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=str(e))
+
+
+@app.get("/mirrors/{mirror_id}/status")
+async def mirror_status(mirror_id: int):
+    return mirror_mgr.get_status(mirror_id)
 
 
 # ─── Models ─────────────────────────────────────────────────────────────────────

@@ -143,18 +143,83 @@ router.post("/mirrors", async (req, res) => {
 router.patch("/mirrors/:id", async (req, res) => {
   const id = Number(req.params["id"]);
   const updates: Record<string, unknown> = {};
-  const { apiId, apiHashEnc, sessionString, enabled, status } = req.body;
+  const { apiId, apiHashEnc, sessionString, enabled, status, phone } = req.body;
   if (typeof apiId === "number") updates["apiId"] = apiId;
   if (typeof apiHashEnc === "string") updates["apiHashEnc"] = apiHashEnc;
   if (typeof sessionString === "string") updates["sessionString"] = sessionString;
   if (typeof enabled === "boolean") updates["enabled"] = enabled;
   if (typeof status === "string") updates["status"] = status;
+  if (typeof phone === "string") updates["phone"] = phone;
   const [row] = await db.update(mirrorsTable).set(updates).where(eq(mirrorsTable.id, id)).returning();
   res.json({ success: true, mirror: row });
 });
 router.delete("/mirrors/:id", async (req, res) => {
   await db.delete(mirrorsTable).where(eq(mirrorsTable.id, Number(req.params["id"])));
   res.json({ success: true });
+});
+
+// ─── Mirror auth proxy → Python (8001) ─────────────────
+const PY_URL = process.env["PYTHON_API_URL"] ?? "http://localhost:8001";
+
+async function proxyPython(method: "POST" | "GET", path: string, body?: unknown) {
+  const r = await fetch(`${PY_URL}${path}`, {
+    method,
+    headers: { "Content-Type": "application/json" },
+    body: body ? JSON.stringify(body) : undefined,
+  });
+  const text = await r.text();
+  let data: unknown;
+  try { data = text ? JSON.parse(text) : {}; } catch { data = { raw: text }; }
+  return { status: r.status, data };
+}
+
+router.post("/mirrors/:id/auth/send-code", async (req, res) => {
+  const id = Number(req.params["id"]);
+  const { apiId, apiHash, phone } = req.body ?? {};
+  if (!apiId || !apiHash || !phone) return res.status(400).json({ error: "E007 — apiId, apiHash, phone required" });
+  const { status, data } = await proxyPython("POST", `/mirrors/${id}/auth/send-code`, { apiId: Number(apiId), apiHash, phone });
+  res.status(status).json(data);
+});
+
+router.post("/mirrors/:id/auth/verify-code", async (req, res) => {
+  const id = Number(req.params["id"]);
+  const { code } = req.body ?? {};
+  if (!code) return res.status(400).json({ error: "E007 — code required" });
+  const { status, data } = await proxyPython("POST", `/mirrors/${id}/auth/verify-code`, { code });
+  res.status(status).json(data);
+});
+
+router.post("/mirrors/:id/auth/verify-password", async (req, res) => {
+  const id = Number(req.params["id"]);
+  const { password } = req.body ?? {};
+  if (!password) return res.status(400).json({ error: "E007 — password required" });
+  const { status, data } = await proxyPython("POST", `/mirrors/${id}/auth/verify-password`, { password });
+  res.status(status).json(data);
+});
+
+router.post("/mirrors/:id/start", async (req, res) => {
+  const id = Number(req.params["id"]);
+  const [row] = await db.select().from(mirrorsTable).where(eq(mirrorsTable.id, id));
+  if (!row) return res.status(404).json({ error: "E404 — mirror not found" });
+  if (!row.apiId || !row.apiHashEnc || !row.sessionString) {
+    return res.status(400).json({ error: "E007 — mirror not authenticated" });
+  }
+  const { status, data } = await proxyPython("POST", `/mirrors/${id}/start`, {
+    apiId: row.apiId, apiHashEnc: row.apiHashEnc, sessionString: row.sessionString, phone: row.phone ?? "",
+  });
+  res.status(status).json(data);
+});
+
+router.post("/mirrors/:id/stop", async (req, res) => {
+  const id = Number(req.params["id"]);
+  const { status, data } = await proxyPython("POST", `/mirrors/${id}/stop`);
+  res.status(status).json(data);
+});
+
+router.get("/mirrors/:id/status", async (req, res) => {
+  const id = Number(req.params["id"]);
+  const { status, data } = await proxyPython("GET", `/mirrors/${id}/status`);
+  res.status(status).json(data);
 });
 
 // ─── Message logs ───────────────────────────────────────

@@ -57,6 +57,47 @@ function parseOutput(stdout: string, startedAt: string, t0: number): TestRun {
   };
 }
 
+const PY_URL = process.env["PYTHON_API_URL"] ?? "http://localhost:8001";
+
+async function pyGet<T = unknown>(path: string, timeoutMs = 4000): Promise<{ ok: boolean; data?: T; error?: string }> {
+  try {
+    const ctrl = new AbortController();
+    const t = setTimeout(() => ctrl.abort(), timeoutMs);
+    const r = await fetch(`${PY_URL}${path}`, { signal: ctrl.signal });
+    clearTimeout(t);
+    if (!r.ok) return { ok: false, error: `HTTP ${r.status}` };
+    return { ok: true, data: (await r.json()) as T };
+  } catch (e) {
+    return { ok: false, error: e instanceof Error ? e.message : String(e) };
+  }
+}
+
+router.get("/system/jobs", async (_req, res) => {
+  const r = await pyGet("/system/jobs");
+  if (!r.ok) return res.status(503).json({ error: r.error, jobs: [], schedulerRunning: false });
+  res.json(r.data);
+});
+
+router.get("/system/health", async (_req, res) => {
+  const startedAt = process.uptime();
+  const [info, status] = await Promise.all([
+    pyGet<any>("/system/info"),
+    pyGet<any>("/auth/status"),
+  ]);
+  res.json({
+    apiServer: { ok: true, uptimeSec: Math.round(startedAt), node: process.version },
+    pythonService: { ok: info.ok, error: info.error ?? null },
+    telegram: info.data?.telegram ?? { connected: false, authorized: false, me: null },
+    inlineBot: info.data?.inlineBot ?? { enabled: false, running: false },
+    mirrors: info.data?.mirrors ?? { active: 0, states: {} },
+    encryption: info.data?.encryption ?? { configured: false },
+    auth: status.data ?? null,
+    lastTestRun: lastRun
+      ? { passed: lastRun.passed, failed: lastRun.failed, total: lastRun.total, status: lastRun.status, finishedAt: lastRun.finishedAt }
+      : null,
+  });
+});
+
 router.get("/system/tests", (_req, res) => {
   res.json({ lastRun, running, botDir: BOT_DIR });
 });

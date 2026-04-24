@@ -50,10 +50,19 @@ export const shadowApi = {
 
   // Profiles
   listProfiles: () => j<{ profiles: any[] }>("/profiles"),
+  deleteProfile: (id: number) => j(`/profiles/${id}`, { method: "DELETE" }),
 
   // Support
   listTickets: () => j<{ tickets: any[] }>("/support"),
   createTicket: (data: { subject: string; message: string }) => j("/support", { method: "POST", body: JSON.stringify(data) }),
+  replyTicket: (id: number, reply: string) =>
+    j<{ success: boolean; ticket: any }>(`/support/${id}/reply`, { method: "PATCH", body: JSON.stringify({ reply }) }),
+  updateTicketStatus: (id: number, status: string) =>
+    j<{ success: boolean; ticket: any }>(`/support/${id}`, { method: "PATCH", body: JSON.stringify({ status }) }),
+  deleteTicket: (id: number) => j(`/support/${id}`, { method: "DELETE" }),
+
+  // Backup / Export
+  exportAll: () => fetch(BASE + "/system/export").then((r) => r.blob()),
 
   // Stats
   shadowStats: () => j<{ keywords: number; autoreplies: number; forwardFilters: number; mirrors: number; messageLogs: number; contactProfiles: number; supportTickets: number }>("/shadow/stats"),

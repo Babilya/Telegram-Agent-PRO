@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { MessageCircle, Send, Clock, Loader2 } from "lucide-react";
+import { MessageCircle, Send, Clock, Loader2, Trash2, Reply, CheckCircle2, RotateCcw } from "lucide-react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -28,6 +28,29 @@ export default function Support() {
     onSuccess: () => {
       toast({ title: "Звернення надіслано", description: "Час відповіді: до 24 годин." });
       setSubject(""); setText("");
+      qc.invalidateQueries({ queryKey: ["tickets"] });
+    },
+  });
+
+  const [replyId, setReplyId] = useState<number | null>(null);
+  const [replyText, setReplyText] = useState("");
+
+  const replyM = useMutation({
+    mutationFn: (d: { id: number; reply: string }) => shadowApi.replyTicket(d.id, d.reply),
+    onSuccess: () => {
+      toast({ title: "Відповідь збережено" });
+      setReplyId(null); setReplyText("");
+      qc.invalidateQueries({ queryKey: ["tickets"] });
+    },
+  });
+  const statusM = useMutation({
+    mutationFn: (d: { id: number; status: string }) => shadowApi.updateTicketStatus(d.id, d.status),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["tickets"] }),
+  });
+  const delM = useMutation({
+    mutationFn: (id: number) => shadowApi.deleteTicket(id),
+    onSuccess: () => {
+      toast({ title: "Звернення видалено" });
       qc.invalidateQueries({ queryKey: ["tickets"] });
     },
   });
@@ -67,22 +90,54 @@ export default function Support() {
           <div className="text-center py-8"><Loader2 className="h-5 w-5 animate-spin inline" /></div>
         ) : tickets.length === 0 ? (
           <p className="text-center text-sm py-6" style={{ color: DIM }}>Звернень немає.</p>
-        ) : tickets.map((t: any) => (
-          <div key={t.id} className="px-3 py-2 rounded-xl" style={{ background: "rgba(255,255,255,0.04)" }}>
-            <div className="flex items-center justify-between mb-1">
-              <p className="text-sm font-display font-bold text-white">{t.subject}</p>
-              <span className="text-[10px] font-mono" style={{ color: t.status === "answered" ? PRI : DIM }}>{t.status}</span>
-            </div>
-            <p className="text-xs text-white/80 mb-1">{t.message}</p>
-            {t.reply && (
-              <div className="mt-2 p-2 rounded-lg border-l-2 border-primary/40 bg-primary/5">
-                <p className="text-[10px] font-display font-bold uppercase tracking-widest mb-0.5" style={{ color: PRI }}>Відповідь</p>
-                <p className="text-xs text-white/90">{t.reply}</p>
+        ) : tickets.map((t: any) => {
+          const isClosed = t.status === "closed";
+          const isAnswered = t.status === "answered";
+          const statusColor = isAnswered ? PRI : isClosed ? "hsl(258 15% 52%)" : "hsl(45 90% 60%)";
+          return (
+            <div key={t.id} className="px-3 py-2 rounded-xl" style={{ background: "rgba(255,255,255,0.04)" }}>
+              <div className="flex items-center justify-between mb-1">
+                <p className="text-sm font-display font-bold text-white">{t.subject}</p>
+                <span className="text-[10px] font-mono uppercase tracking-wider px-1.5 py-0.5 rounded" style={{ color: statusColor, background: `${statusColor}15` }}>{t.status}</span>
               </div>
-            )}
-            <p className="text-[9px] font-mono mt-1" style={{ color: DIM }}>{new Date(t.createdAt).toLocaleString("uk")}</p>
-          </div>
-        ))}
+              <p className="text-xs text-white/80 mb-1">{t.message}</p>
+              {t.reply && (
+                <div className="mt-2 p-2 rounded-lg border-l-2 border-primary/40 bg-primary/5">
+                  <p className="text-[10px] font-display font-bold uppercase tracking-widest mb-0.5" style={{ color: PRI }}>Відповідь</p>
+                  <p className="text-xs text-white/90">{t.reply}</p>
+                </div>
+              )}
+              <div className="flex items-center justify-between mt-1.5 gap-2">
+                <p className="text-[9px] font-mono" style={{ color: DIM }}>{new Date(t.createdAt).toLocaleString("uk")}</p>
+                <div className="flex items-center gap-1">
+                  <button onClick={() => { setReplyId(replyId === t.id ? null : t.id); setReplyText(t.reply ?? ""); }} className="p-1 rounded hover:bg-white/5" title="Відповісти" data-testid={`btn-reply-${t.id}`}>
+                    <Reply className="h-3 w-3" style={{ color: PRI }} />
+                  </button>
+                  {!isClosed ? (
+                    <button onClick={() => statusM.mutate({ id: t.id, status: "closed" })} className="p-1 rounded hover:bg-white/5" title="Закрити" data-testid={`btn-close-${t.id}`}>
+                      <CheckCircle2 className="h-3 w-3" style={{ color: DIM }} />
+                    </button>
+                  ) : (
+                    <button onClick={() => statusM.mutate({ id: t.id, status: "open" })} className="p-1 rounded hover:bg-white/5" title="Відкрити знову" data-testid={`btn-reopen-${t.id}`}>
+                      <RotateCcw className="h-3 w-3" style={{ color: DIM }} />
+                    </button>
+                  )}
+                  <button onClick={() => { if (confirm("Видалити звернення?")) delM.mutate(t.id); }} className="p-1 rounded hover:bg-white/5" title="Видалити" data-testid={`btn-delete-${t.id}`}>
+                    <Trash2 className="h-3 w-3" style={{ color: "hsl(0 84% 60%)" }} />
+                  </button>
+                </div>
+              </div>
+              {replyId === t.id && (
+                <div className="mt-2 flex gap-2">
+                  <textarea rows={2} value={replyText} onChange={(e) => setReplyText(e.target.value)} placeholder="Текст відповіді…" className="flex-1 bg-transparent outline-none text-xs text-white placeholder:text-muted-foreground resize-none border border-white/10 rounded-md px-2 py-1.5" data-testid={`input-reply-${t.id}`} />
+                  <Button onClick={() => replyM.mutate({ id: t.id, reply: replyText.trim() })} disabled={!replyText.trim() || replyM.isPending} size="icon" data-testid={`btn-send-reply-${t.id}`}>
+                    {replyM.isPending ? <Loader2 className="h-3 w-3 animate-spin" /> : <Send className="h-3 w-3" />}
+                  </Button>
+                </div>
+              )}
+            </div>
+          );
+        })}
       </div>
 
       <div className="rounded-2xl p-3 space-y-2" style={card}>

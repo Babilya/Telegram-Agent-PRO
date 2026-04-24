@@ -267,6 +267,12 @@ router.patch("/profiles/:id", async (req, res) => {
   const [row] = await db.update(contactProfilesTable).set(req.body).where(eq(contactProfilesTable.id, id)).returning();
   res.json({ success: true, profile: row });
 });
+router.delete("/profiles/:id", async (req, res) => {
+  const id = Number(req.params["id"]);
+  const [row] = await db.delete(contactProfilesTable).where(eq(contactProfilesTable.id, id)).returning();
+  if (!row) return res.status(404).json({ error: "E404 — profile not found" });
+  res.json({ success: true });
+});
 
 // ─── Support tickets ────────────────────────────────────
 router.get("/support", async (_req, res) => {
@@ -287,6 +293,22 @@ router.patch("/support/:id/reply", async (req, res) => {
   const { reply } = req.body as { reply: string };
   const [row] = await db.update(supportTicketsTable).set({ reply, status: "answered" }).where(eq(supportTicketsTable.id, id)).returning();
   res.json({ success: true, ticket: row });
+});
+router.patch("/support/:id", async (req, res) => {
+  const id = Number(req.params["id"]);
+  const { status } = req.body as { status?: string };
+  const updates: Record<string, unknown> = {};
+  if (typeof status === "string") updates["status"] = status;
+  if (Object.keys(updates).length === 0) return res.status(400).json({ error: "E007 — nothing to update" });
+  const [row] = await db.update(supportTicketsTable).set(updates).where(eq(supportTicketsTable.id, id)).returning();
+  if (!row) return res.status(404).json({ error: "E404 — ticket not found" });
+  res.json({ success: true, ticket: row });
+});
+router.delete("/support/:id", async (req, res) => {
+  const id = Number(req.params["id"]);
+  const [row] = await db.delete(supportTicketsTable).where(eq(supportTicketsTable.id, id)).returning();
+  if (!row) return res.status(404).json({ error: "E404 — ticket not found" });
+  res.json({ success: true });
 });
 
 // ─── Cancel counter (E012 — max 10 cancels per 24h, then 1h block) ─────

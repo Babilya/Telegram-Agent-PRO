@@ -30,6 +30,7 @@ import MenuPage from "@/pages/menu";
 import SystemPage from "@/pages/system";
 import ActivityPage from "@/pages/activity";
 import SchedulerPage from "@/pages/scheduler";
+import BackupPage from "@/pages/backup";
 import { AuthModal } from "@/components/auth/auth-modal";
 import { useGetAuthStatus, getGetAuthStatusQueryKey } from "@workspace/api-client-react";
 import { Loader2 } from "lucide-react";
@@ -95,6 +96,7 @@ const protectedRoutes: { path: string; component: React.ComponentType }[] = [
   { path: "/system", component: SystemPage },
   { path: "/activity", component: ActivityPage },
   { path: "/scheduler", component: SchedulerPage },
+  { path: "/backup", component: BackupPage },
 ];
 
 function Router() {

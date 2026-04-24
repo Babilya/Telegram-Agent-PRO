@@ -3,6 +3,17 @@ import { execFile } from "node:child_process";
 import { promisify } from "node:util";
 import path from "node:path";
 import fs from "node:fs";
+import {
+  db,
+  keywordsTable,
+  autoRepliesTable,
+  forwardFiltersTable,
+  mirrorsTable,
+  messageLogsTable,
+  contactProfilesTable,
+  supportTicketsTable,
+} from "@workspace/db";
+import { desc } from "drizzle-orm";
 
 const execFileAsync = promisify(execFile);
 const router: IRouter = Router();
@@ -100,6 +111,43 @@ router.get("/system/health", async (_req, res) => {
 
 router.get("/system/tests", (_req, res) => {
   res.json({ lastRun, running, botDir: BOT_DIR });
+});
+
+router.get("/system/export", async (_req, res) => {
+  try {
+    const [keywords, autoreplies, forwarding, mirrors, logs, profiles, tickets] = await Promise.all([
+      db.select().from(keywordsTable).orderBy(desc(keywordsTable.createdAt)),
+      db.select().from(autoRepliesTable).orderBy(desc(autoRepliesTable.createdAt)),
+      db.select().from(forwardFiltersTable).orderBy(desc(forwardFiltersTable.createdAt)),
+      db.select({
+        id: mirrorsTable.id, ownerName: mirrorsTable.ownerName, ownerTelegramId: mirrorsTable.ownerTelegramId,
+        phone: mirrorsTable.phone, status: mirrorsTable.status, lastSync: mirrorsTable.lastSync, createdAt: mirrorsTable.createdAt,
+      }).from(mirrorsTable).orderBy(desc(mirrorsTable.createdAt)),
+      db.select().from(messageLogsTable).orderBy(desc(messageLogsTable.createdAt)).limit(2000),
+      db.select().from(contactProfilesTable).orderBy(desc(contactProfilesTable.createdAt)),
+      db.select().from(supportTicketsTable).orderBy(desc(supportTicketsTable.createdAt)),
+    ]);
+    const archive = {
+      meta: {
+        app: "SHADOW AGENT PRO",
+        version: "3.8",
+        exportedAt: new Date().toISOString(),
+        node: process.version,
+        counts: {
+          keywords: keywords.length, autoreplies: autoreplies.length, forwarding: forwarding.length,
+          mirrors: mirrors.length, messageLogs: logs.length, contactProfiles: profiles.length, supportTickets: tickets.length,
+        },
+        notes: "Сесійні файли Telethon і ключ шифрування НЕ включені — це лише дані SHADOW DB.",
+      },
+      data: { keywords, autoreplies, forwarding, mirrors, messageLogs: logs, contactProfiles: profiles, supportTickets: tickets },
+    };
+    const filename = `shadow-backup-${new Date().toISOString().slice(0, 19).replace(/[:T]/g, "-")}.json`;
+    res.setHeader("Content-Type", "application/json");
+    res.setHeader("Content-Disposition", `attachment; filename="${filename}"`);
+    res.send(JSON.stringify(archive, null, 2));
+  } catch (e) {
+    res.status(500).json({ error: e instanceof Error ? e.message : "export failed" });
+  }
 });
 
 router.post("/system/tests/run", async (_req, res) => {

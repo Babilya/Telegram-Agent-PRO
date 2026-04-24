@@ -10,6 +10,7 @@ import parseRouter from "./parse";
 import contactsRouter from "./contacts";
 import shadowRouter from "./shadow";
 import shadowMediaRouter from "./shadow-media";
+import systemRouter from "./system";
 
 const router: IRouter = Router();
 
@@ -24,5 +25,6 @@ router.use(parseRouter);
 router.use(contactsRouter);
 router.use(shadowRouter);
 router.use(shadowMediaRouter);
+router.use(systemRouter);
 
 export default router;

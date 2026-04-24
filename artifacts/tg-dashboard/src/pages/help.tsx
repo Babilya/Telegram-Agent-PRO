@@ -1,11 +1,13 @@
-import { useState } from "react";
-import { BookOpen, AlertTriangle, HelpCircle, Shield, Compass, FileText, ChevronRight } from "lucide-react";
+import { useEffect, useState } from "react";
+import { BookOpen, AlertTriangle, HelpCircle, Shield, Compass, FileText, ChevronRight, FlaskConical, Loader2, CheckCircle2, XCircle, PlayCircle } from "lucide-react";
 
 const PRI = "hsl(271 91% 65%)";
 const DIM = "hsl(258 15% 52%)";
+const OK = "hsl(142 71% 45%)";
+const ERR = "hsl(0 84% 60%)";
 const card: React.CSSProperties = { background: "rgba(255,255,255,0.045)", border: "1px solid rgba(255,255,255,0.07)" };
 
-type Tab = "menu" | "guide" | "faq" | "errors" | "security" | "quick";
+type Tab = "menu" | "guide" | "faq" | "errors" | "security" | "quick" | "tests";
 
 const errors = [
   { code: "E001", title: "FloodWaitError", desc: "Занадто часта розсилка. Збільште інтервал до 5+ хв." },
@@ -42,6 +44,7 @@ const tabs: { key: Tab; label: string; icon: any }[] = [
   { key: "faq", label: "FAQ", icon: HelpCircle },
   { key: "errors", label: "Помилки", icon: AlertTriangle },
   { key: "security", label: "Безпека", icon: Shield },
+  { key: "tests", label: "Тести", icon: FlaskConical },
 ];
 
 export default function Help() {
@@ -77,6 +80,7 @@ export default function Help() {
       {tab === "faq" && <FAQ />}
       {tab === "errors" && <Errors />}
       {tab === "security" && <Security />}
+      {tab === "tests" && <Tests />}
     </div>
   );
 }
@@ -218,6 +222,199 @@ function Security() {
           <li key={p} className="flex gap-2"><span style={{ color: PRI }}>•</span>{p}</li>
         ))}
       </ul>
+    </div>
+  );
+}
+
+interface TestRun {
+  startedAt: string;
+  finishedAt: string;
+  durationMs: number;
+  passed: number;
+  failed: number;
+  total: number;
+  status: "ok" | "fail" | "error";
+  tests: { name: string; status: "passed" | "failed" }[];
+  error?: string;
+}
+
+function Tests() {
+  const [lastRun, setLastRun] = useState<TestRun | null>(null);
+  const [running, setRunning] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [showAll, setShowAll] = useState(false);
+
+  async function refresh() {
+    try {
+      const r = await fetch("/api/system/tests");
+      const j = await r.json();
+      setLastRun(j.lastRun);
+      setRunning(j.running);
+    } catch (e: any) {
+      setError(e?.message ?? "Помилка завантаження");
+    }
+  }
+
+  useEffect(() => {
+    refresh();
+    const id = setInterval(refresh, running ? 2000 : 10000);
+    return () => clearInterval(id);
+  }, [running]);
+
+  async function runTests() {
+    setRunning(true);
+    setError(null);
+    try {
+      const r = await fetch("/api/system/tests/run", { method: "POST" });
+      const j = await r.json();
+      if (j.lastRun) setLastRun(j.lastRun);
+      if (!j.success && j.message) setError(j.message);
+    } catch (e: any) {
+      setError(e?.message ?? "Не вдалося запустити тести");
+    } finally {
+      setRunning(false);
+    }
+  }
+
+  const status = lastRun?.status;
+  const badgeColor = status === "ok" ? OK : status === "fail" ? ERR : DIM;
+  const StatusIcon = status === "ok" ? CheckCircle2 : status === "fail" ? XCircle : FlaskConical;
+  const failed = lastRun?.tests.filter((t) => t.status === "failed") ?? [];
+  const visible = showAll ? lastRun?.tests ?? [] : failed.length ? failed : (lastRun?.tests ?? []).slice(0, 5);
+
+  return (
+    <div className="space-y-3">
+      <div className="rounded-2xl p-4" style={card}>
+        <div className="flex items-start justify-between gap-3 mb-3">
+          <div className="flex items-center gap-2.5">
+            <div
+              className="rounded-xl p-2 flex items-center justify-center"
+              style={{ background: `${badgeColor} / 0.12`, border: `1px solid ${badgeColor}` }}
+            >
+              <StatusIcon className="h-5 w-5" style={{ color: badgeColor }} />
+            </div>
+            <div>
+              <p className="text-sm font-display font-bold text-white">
+                {lastRun
+                  ? status === "ok"
+                    ? `Усі тести зелені — ${lastRun.passed}/${lastRun.total}`
+                    : status === "fail"
+                    ? `Червоні: ${lastRun.failed}/${lastRun.total}`
+                    : "Помилка запуску"
+                  : "Тести ще не запускались"}
+              </p>
+              <p className="text-[11px]" style={{ color: DIM }}>
+                {lastRun
+                  ? `${new Date(lastRun.finishedAt).toLocaleString("uk-UA")} · ${(lastRun.durationMs / 1000).toFixed(2)}s`
+                  : "Натисніть «Запустити» щоб виконати pytest"}
+              </p>
+            </div>
+          </div>
+          <button
+            onClick={runTests}
+            disabled={running}
+            className="flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-medium transition-all disabled:opacity-50"
+            style={{
+              background: "linear-gradient(135deg, hsl(271 91% 65% / 0.25), hsl(316 90% 62% / 0.15))",
+              border: "1px solid hsl(271 91% 65% / 0.4)",
+              color: "white",
+            }}
+          >
+            {running ? (
+              <>
+                <Loader2 className="h-3.5 w-3.5 animate-spin" /> Виконую…
+              </>
+            ) : (
+              <>
+                <PlayCircle className="h-3.5 w-3.5" /> Запустити
+              </>
+            )}
+          </button>
+        </div>
+
+        {lastRun && lastRun.total > 0 && (
+          <div className="grid grid-cols-3 gap-2 mt-3">
+            <Stat label="Усього" value={lastRun.total} color={PRI} />
+            <Stat label="Пройшло" value={lastRun.passed} color={OK} />
+            <Stat label="Впало" value={lastRun.failed} color={lastRun.failed > 0 ? ERR : DIM} />
+          </div>
+        )}
+
+        {error && (
+          <p className="text-xs mt-3" style={{ color: ERR }}>
+            {error}
+          </p>
+        )}
+        {lastRun?.error && (
+          <p className="text-xs mt-3 font-mono" style={{ color: ERR }}>
+            {lastRun.error}
+          </p>
+        )}
+      </div>
+
+      {lastRun && lastRun.tests.length > 0 && (
+        <div className="rounded-2xl p-4" style={card}>
+          <div className="flex items-center justify-between mb-2">
+            <p className="text-[11px] font-display font-bold uppercase tracking-widest" style={{ color: DIM }}>
+              {failed.length > 0 && !showAll ? `Червоні (${failed.length})` : `Тести (${lastRun.tests.length})`}
+            </p>
+            <button
+              onClick={() => setShowAll((v) => !v)}
+              className="text-[11px] underline"
+              style={{ color: DIM }}
+            >
+              {showAll ? "Лише червоні" : "Показати всі"}
+            </button>
+          </div>
+          <div className="space-y-1 max-h-72 overflow-y-auto">
+            {visible.map((t, i) => (
+              <div
+                key={`${t.name}-${i}`}
+                className="flex items-center gap-2 px-2.5 py-1.5 rounded-lg text-xs font-mono"
+                style={card}
+              >
+                {t.status === "passed" ? (
+                  <CheckCircle2 className="h-3 w-3 flex-shrink-0" style={{ color: OK }} />
+                ) : (
+                  <XCircle className="h-3 w-3 flex-shrink-0" style={{ color: ERR }} />
+                )}
+                <span className="text-white truncate">{t.name}</span>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      <div className="rounded-2xl p-4" style={card}>
+        <p className="text-[11px] font-display font-bold uppercase tracking-widest mb-2" style={{ color: DIM }}>
+          Покриття
+        </p>
+        <div className="grid grid-cols-2 gap-1.5 text-xs">
+          {[
+            "test_broadcast.py — 15 тестів",
+            "test_helpers.py — 7 тестів",
+            "test_monitor.py — 6 тестів",
+            "Cache TTL · Fernet · monitor",
+          ].map((s) => (
+            <div key={s} className="px-2.5 py-2 rounded-lg text-white" style={card}>
+              {s}
+            </div>
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function Stat({ label, value, color }: { label: string; value: number; color: string }) {
+  return (
+    <div className="rounded-xl px-3 py-2" style={card}>
+      <p className="text-[10px] uppercase tracking-widest" style={{ color: DIM }}>
+        {label}
+      </p>
+      <p className="text-lg font-display font-black" style={{ color }}>
+        {value}
+      </p>
     </div>
   );
 }

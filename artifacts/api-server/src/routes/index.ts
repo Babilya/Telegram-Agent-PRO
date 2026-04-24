@@ -8,6 +8,8 @@ import jobsRouter from "./jobs";
 import statsRouter from "./stats";
 import parseRouter from "./parse";
 import contactsRouter from "./contacts";
+import shadowRouter from "./shadow";
+import shadowMediaRouter from "./shadow-media";
 
 const router: IRouter = Router();
 
@@ -20,5 +22,7 @@ router.use(jobsRouter);
 router.use(statsRouter);
 router.use(parseRouter);
 router.use(contactsRouter);
+router.use(shadowRouter);
+router.use(shadowMediaRouter);
 
 export default router;

@@ -1,12 +1,12 @@
 import { Link, useLocation } from "wouter";
-import { LayoutDashboard, Search, Users, Megaphone, Bug } from "lucide-react";
+import { LayoutDashboard, Megaphone, Eye, BarChart3, Menu } from "lucide-react";
 
 const nav = [
   { href: "/dashboard", icon: LayoutDashboard, label: "Огляд" },
-  { href: "/search",    icon: Search,          label: "Пошук" },
-  { href: "/groups",    icon: Users,            label: "Групи" },
-  { href: "/campaigns", icon: Megaphone,        label: "Кампанії" },
-  { href: "/parsers",   icon: Bug,              label: "Парсер" },
+  { href: "/campaigns", icon: Megaphone,        label: "Розсилки" },
+  { href: "/monitor",   icon: Eye,              label: "Моніторинг" },
+  { href: "/stats",     icon: BarChart3,        label: "Статистика" },
+  { href: "/menu",      icon: Menu,             label: "Меню" },
 ];
 
 export function BottomNav() {
@@ -26,7 +26,7 @@ export function BottomNav() {
     >
       {nav.map(({ href, icon: Icon, label }) => {
         const isActive =
-          location === href || (href !== "/dashboard" && location.startsWith(href));
+          location === href || (href !== "/dashboard" && href !== "/menu" && location.startsWith(href));
         return (
           <Link
             key={href}

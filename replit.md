@@ -273,3 +273,45 @@ Run: `cd telegram-bot && python -m pytest -v` → **28/28 passed in ~3.5s**.
 
 ### Why these tests
 These cover the stable, deterministic units. End-to-end Telethon event tests require a live Telegram session and are out of scope; instead, all HTTP contracts and pure logic are mocked and verified.
+
+## Update — Stage 5 optional extensions (Apr 24, 2026)
+
+All three "залишилось як опційні розширення" items implemented and live.
+
+### 1. Mirror authentication UI + per-mirror sub-Telethon client
+**Backend (Python — `telegram-bot/mirror_manager.py`)**
+- `MirrorManager` keeps a per-mirror `TelegramClient(StringSession())` and tracks auth state in memory: `idle → pending_code → pending_password → ready → running → error`.
+- Methods: `send_code`, `verify_code`, `verify_password` (handles `SessionPasswordNeededError`), `start` (spawns background `run_until_disconnected` task), `stop` (cancels task + disconnects), `get_status`, `shutdown_all`.
+- After successful auth, `client.session.save()` is encrypted with Fernet (`crypto_utils.encrypt`) and PATCH'd back to PostgreSQL via the Express API; `api_hash` is encrypted the same way.
+- Schema: added `phone` text column to `mirrors`.
+
+**Endpoints (Python on :8001)**
+- `POST /mirrors/{id}/auth/send-code   {apiId, apiHash, phone}`
+- `POST /mirrors/{id}/auth/verify-code {code}`
+- `POST /mirrors/{id}/auth/verify-password {password}`
+- `POST /mirrors/{id}/start  {apiId, apiHashEnc, sessionString, phone}`
+- `POST /mirrors/{id}/stop`
+- `GET  /mirrors/{id}/status`
+
+**Express proxy (`artifacts/api-server/src/routes/shadow.ts`)** — same paths under `/api/mirrors/...`; `start` reads encrypted creds from DB and forwards. `proxyPython()` helper centralises the JSON forwarding.
+
+**Frontend (`artifacts/tg-dashboard/src/pages/mirrors.tsx`)** — multi-step `Dialog` flow: credentials (`apiId/apiHash/phone`) → code → optional 2FA password → done. Each mirror card now shows status badge (running/ready/pending_code/error/idle) and contextual `Авторизувати` / `Старт` / `Стоп` / `Видалити` buttons. Live status polling every 5 s.
+
+### 2. BotFather inline-bot companion
+- `telegram-bot/inline_bot.py` — separate `TelegramClient` started with `bot_token=TELEGRAM_BOT_TOKEN`, runs alongside the userbot in the same FastAPI lifespan.
+- Reacts to `/start`, `/menu`, `/help`; renders `InlineKeyboardButton` grid (Розсилки, Моніторинг, Автовідповіді, Пересилання, Дзеркала, Логи, Статистика, Підтримка, Довідка, Закрити).
+- Each callback fetches the corresponding `/api/...` endpoint and edits the message in place — proper inline-keyboard UX that the userbot itself cannot deliver.
+- Lazy: skipped silently if `TELEGRAM_BOT_TOKEN` is not set; cleanly shut down on lifespan exit.
+- Live as **@home_prembot**.
+
+### 3. Live integration smoke test
+- `telegram-bot/tests/test_integration.py` — auto-skips if api-server is not on :8080; otherwise hits real endpoints (`/api/healthz`, full keyword CRUD + hit counter, autoreplies + forwarding CRUD, support tickets, `/api/system/tests`).
+- Runs in ~150 ms in addition to the unit suite.
+
+### Test suite total
+`cd telegram-bot && python -m pytest -v` → **33/33 passed in ~2.4 s**
+(28 unit + 5 live integration). The "Тести" tab in `/help` reflects the new total automatically.
+
+### Files added / modified
+- new: `telegram-bot/mirror_manager.py`, `telegram-bot/inline_bot.py`, `telegram-bot/tests/test_integration.py`
+- modified: `telegram-bot/main.py` (mirror endpoints, inline bot lifecycle), `lib/db/src/schema/shadow.ts` (`phone` column), `artifacts/api-server/src/routes/shadow.ts` (auth proxy + `phone` in PATCH), `artifacts/tg-dashboard/src/lib/shadow-api.ts` (mirror auth helpers), `artifacts/tg-dashboard/src/pages/mirrors.tsx` (auth dialog flow).

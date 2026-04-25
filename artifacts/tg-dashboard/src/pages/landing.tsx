@@ -107,47 +107,104 @@ function FeatureRow({
   );
 }
 
-/* ──────────── Page 1: WELCOME (big centered logo hero) ──────────── */
-function PageWelcome() {
-  return (
-    <div className="relative z-10 flex-1 flex flex-col items-center justify-center px-6 max-w-lg mx-auto w-full">
-      {/* Big logo, vertically centered in upper half */}
-      <div className="flex flex-col items-center gap-5 -mt-12">
-        <div
-          className="flex items-center justify-center"
-          style={{
-            width: "clamp(96px, 28vw, 132px)",
-            height: "clamp(96px, 28vw, 132px)",
-            borderRadius: "clamp(22px, 6vw, 30px)",
-            background: "linear-gradient(160deg, hsl(271 91% 68%), hsl(316 90% 60%))",
-            boxShadow:
-              "0 12px 36px hsl(271 91% 50% / 0.55)," +
-              "0 0 64px hsl(316 90% 60% / 0.35)," +
-              "inset 0 2px 0 rgba(255,255,255,0.28)," +
-              "inset 0 -2px 0 rgba(0,0,0,0.22)",
-          }}
-        >
-          <TelegramIcon className="text-white" style={{ width: "55%", height: "55%" }} />
-        </div>
+/* ──────────── Page 1: WELCOME (avatars circle around central logo) ──────────── */
+const AVATAR_IDS = [12, 5, 16, 32, 47, 49, 26, 60, 14, 20];
 
+function PageWelcome() {
+  const COUNT = AVATAR_IDS.length;
+  const ring = "min(64vw, 280px)";
+  const center = "min(22vw, 96px)";
+  const avatar = "min(13vw, 56px)";
+
+  return (
+    <div className="relative z-10 flex-1 flex flex-col items-center justify-between px-6 max-w-lg mx-auto w-full pt-4 pb-3">
+      {/* Avatar ring with central logo */}
+      <div className="flex-1 flex items-center justify-center w-full min-h-0">
+        <div
+          className="relative"
+          style={{ width: `calc(${ring} + ${avatar})`, height: `calc(${ring} + ${avatar})` }}
+        >
+          {/* Soft halo behind the ring */}
+          <div
+            className="absolute inset-0 rounded-full pointer-events-none"
+            style={{
+              background:
+                "radial-gradient(circle at center, hsl(271 91% 50% / 0.18) 0%, transparent 65%)",
+            }}
+          />
+
+          {/* Central logo — purple gradient rounded square with Telegram icon */}
+          <div
+            className="absolute top-1/2 left-1/2 flex items-center justify-center"
+            style={{
+              width: center,
+              height: center,
+              borderRadius: "clamp(18px, 5vw, 24px)",
+              transform: "translate(-50%, -50%)",
+              background: "linear-gradient(160deg, hsl(271 91% 68%), hsl(316 90% 60%))",
+              boxShadow:
+                "0 12px 36px hsl(271 91% 50% / 0.55)," +
+                "0 0 64px hsl(316 90% 60% / 0.35)," +
+                "inset 0 2px 0 rgba(255,255,255,0.28)," +
+                "inset 0 -2px 0 rgba(0,0,0,0.22)",
+              zIndex: 5,
+            }}
+          >
+            <TelegramIcon className="text-white" style={{ width: "55%", height: "55%" }} />
+          </div>
+
+          {/* Avatars distributed on a circle */}
+          {AVATAR_IDS.map((id, i) => {
+            const angle = (i / COUNT) * Math.PI * 2 - Math.PI / 2;
+            const cos = Math.cos(angle).toFixed(4);
+            const sin = Math.sin(angle).toFixed(4);
+            return (
+              <div
+                key={i}
+                className="absolute top-1/2 left-1/2 rounded-full overflow-hidden"
+                style={{
+                  width: avatar,
+                  height: avatar,
+                  transform: `translate(calc(-50% + ${cos} * (${ring}) / 2), calc(-50% + ${sin} * (${ring}) / 2))`,
+                  background: "linear-gradient(135deg, hsl(271 91% 35%), hsl(316 90% 30%))",
+                  border: "2px solid hsl(271 60% 35% / 0.7)",
+                  boxShadow:
+                    "0 4px 14px rgba(0,0,0,0.45)," +
+                    "inset 0 1px 0 rgba(255,255,255,0.18)",
+                }}
+              >
+                <img
+                  src={`https://i.pravatar.cc/120?img=${id}`}
+                  alt=""
+                  className="w-full h-full object-cover"
+                  style={{ filter: "saturate(0.85) contrast(1.05)" }}
+                  draggable={false}
+                  loading="eager"
+                />
+              </div>
+            );
+          })}
+        </div>
+      </div>
+
+      {/* Title + description (below the ring, above the button) */}
+      <div className="flex flex-col items-center gap-2 px-2 shrink-0 pt-2">
         <h1
           className="font-display font-black tracking-tight text-center"
-          style={{ fontSize: "clamp(2rem, 9vw, 2.8rem)", lineHeight: 1.05 }}
+          style={{ fontSize: "clamp(1.55rem, 7.5vw, 2.1rem)", lineHeight: 1.05 }}
         >
           <span className="text-white">GROUP </span>
-          <span style={gradientText}>AGENT</span>
+          <span style={gradientText}>AGENT PRO</span>
         </h1>
-
         <p
-          className="text-center leading-snug px-2"
+          className="text-center leading-snug"
           style={{
             color: "hsl(258 12% 72%)",
-            fontSize: "clamp(0.85rem, 3.6vw, 0.95rem)",
-            maxWidth: "32ch",
+            fontSize: "clamp(0.82rem, 3.4vw, 0.92rem)",
+            maxWidth: "30ch",
           }}
         >
-          Розумний помічник для Telegram-груп: автоматизує розсилки,
-          моніторить діалоги і керує дзеркалами акаунтів — все від вашого імені, цілодобово.
+          Автоматизуйте ваші Telegram-комунікації за допомогою розумного агента — розсилки, моніторинг і дзеркала акаунтів.
         </p>
       </div>
     </div>
@@ -431,7 +488,7 @@ export default function Landing() {
 
   const isLast = page === TOTAL_PAGES - 1;
   const isWelcome = page === 0;
-  const buttonLabel = isWelcome ? "ПОЧАТИ" : isLast ? "ЗАРЕЄСТРУВАТИСЯ" : "ДАЛІ";
+  const buttonLabel = isWelcome ? "РОЗПОЧАТИ" : isLast ? "ЗАРЕЄСТРУВАТИСЯ" : "ДАЛІ";
 
   return (
     <>

@@ -7,7 +7,7 @@ import {
 
 const PRI = "hsl(271 91% 65%)";
 const DIM = "hsl(258 15% 52%)";
-const card: React.CSSProperties = { background: "rgba(255,255,255,0.045)", border: "1px solid rgba(255,255,255,0.07)" };
+const card: React.CSSProperties = { background: "linear-gradient(160deg, hsl(258 35% 14% / 0.85), hsl(258 35% 9% / 0.85))", border: "1px solid hsl(271 40% 28% / 0.5)", boxShadow: "inset 0 1px 0 rgba(255,255,255,0.06), inset 0 -1px 0 rgba(0,0,0,0.4), 0 4px 16px rgba(0,0,0,0.25)" };
 
 const sections: { title: string; items: { href: string; icon: any; label: string; sub?: string }[] }[] = [
   {
@@ -60,7 +60,7 @@ export default function MenuPage() {
     <div className="space-y-4 pb-2">
       <div>
         <h1 className="text-2xl font-display font-black tracking-tight text-gradient">Меню</h1>
-        <p className="text-muted-foreground text-sm">Усі функції SHADOW AGENT PRO.</p>
+        <p className="text-muted-foreground text-sm">Усі функції GROUP AGENT PRO.</p>
       </div>
 
       {sections.map((s) => (

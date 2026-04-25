@@ -5,7 +5,7 @@ const PRI = "hsl(271 91% 65%)";
 const DIM = "hsl(258 15% 52%)";
 const OK = "hsl(142 71% 45%)";
 const ERR = "hsl(0 84% 60%)";
-const card: React.CSSProperties = { background: "rgba(255,255,255,0.045)", border: "1px solid rgba(255,255,255,0.07)" };
+const card: React.CSSProperties = { background: "linear-gradient(160deg, hsl(258 35% 14% / 0.85), hsl(258 35% 9% / 0.85))", border: "1px solid hsl(271 40% 28% / 0.5)", boxShadow: "inset 0 1px 0 rgba(255,255,255,0.06), inset 0 -1px 0 rgba(0,0,0,0.4), 0 4px 16px rgba(0,0,0,0.25)" };
 
 type Tab = "menu" | "guide" | "faq" | "errors" | "security" | "quick" | "tests";
 
@@ -61,7 +61,7 @@ export default function Help() {
     <div className="space-y-4 pb-2">
       <div>
         <h1 className="text-2xl font-display font-black tracking-tight text-gradient">📘 Довідковий каталог</h1>
-        <p className="text-muted-foreground text-sm">SHADOW AGENT PRO v3.8</p>
+        <p className="text-muted-foreground text-sm">GROUP AGENT PRO v3.8</p>
       </div>
 
       <div className="grid grid-cols-3 gap-1.5">

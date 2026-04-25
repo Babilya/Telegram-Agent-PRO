@@ -130,7 +130,7 @@ router.get("/system/export", async (_req, res) => {
     ]);
     const archive = {
       meta: {
-        app: "SHADOW AGENT PRO",
+        app: "GROUP AGENT PRO",
         version: "3.8",
         exportedAt: new Date().toISOString(),
         node: process.version,
@@ -138,11 +138,11 @@ router.get("/system/export", async (_req, res) => {
           keywords: keywords.length, autoreplies: autoreplies.length, forwarding: forwarding.length,
           mirrors: mirrors.length, messageLogs: logs.length, contactProfiles: profiles.length, supportTickets: tickets.length,
         },
-        notes: "Сесійні файли Telethon і ключ шифрування НЕ включені — це лише дані SHADOW DB.",
+        notes: "Сесійні файли Telethon і ключ шифрування НЕ включені — це лише дані з бази GROUP AGENT.",
       },
       data: { keywords, autoreplies, forwarding, mirrors, messageLogs: logs, contactProfiles: profiles, supportTickets: tickets },
     };
-    const filename = `shadow-backup-${new Date().toISOString().slice(0, 19).replace(/[:T]/g, "-")}.json`;
+    const filename = `group-agent-backup-${new Date().toISOString().slice(0, 19).replace(/[:T]/g, "-")}.json`;
     res.setHeader("Content-Type", "application/json");
     res.setHeader("Content-Disposition", `attachment; filename="${filename}"`);
     res.send(JSON.stringify(archive, null, 2));

@@ -7,7 +7,7 @@ const DIM = "hsl(258 15% 52%)";
 const OK = "hsl(142 71% 45%)";
 const ERR = "hsl(0 84% 60%)";
 const WARN = "hsl(38 92% 55%)";
-const card: React.CSSProperties = { background: "rgba(255,255,255,0.045)", border: "1px solid rgba(255,255,255,0.07)" };
+const card: React.CSSProperties = { background: "linear-gradient(160deg, hsl(258 35% 14% / 0.85), hsl(258 35% 9% / 0.85))", border: "1px solid hsl(271 40% 28% / 0.5)", boxShadow: "inset 0 1px 0 rgba(255,255,255,0.06), inset 0 -1px 0 rgba(0,0,0,0.4), 0 4px 16px rgba(0,0,0,0.25)" };
 
 const apiBase = ((import.meta.env.BASE_URL ?? "/") + "api").replace(/\/+/g, "/");
 
@@ -63,7 +63,7 @@ export default function SystemPage() {
         <Tile icon={<Bot />} label="Інлайн-бот" value={ib.running ? "Працює" : ib.enabled ? "Запускається…" : "Вимкнено"}
           sub={ib.enabled ? "TELEGRAM_BOT_TOKEN ✓" : "Token не задано"} ok={ib.running} warn={ib.enabled && !ib.running} />
         <Tile icon={<Lock />} label="Шифрування" value={enc.configured ? "Налаштовано" : "Dev-ключ"}
-          sub={enc.configured ? "SHADOW_ENCRYPTION_KEY ✓" : "Похідний ключ із API_HASH"} ok={enc.configured} warn={!enc.configured} />
+          sub={enc.configured ? "Окремий ключ шифрування ✓" : "Похідний ключ із API_HASH"} ok={enc.configured} warn={!enc.configured} />
         <Tile icon={<KeyRound />} label="Активні дзеркала" value={String(mr.active ?? 0)} sub="з власними сесіями" ok={mr.active > 0} />
       </div>
 

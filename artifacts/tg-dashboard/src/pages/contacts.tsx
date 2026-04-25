@@ -6,7 +6,7 @@ import { Link } from "wouter";
 
 const PRI = "hsl(271 91% 65%)";
 const DIM = "hsl(258 15% 52%)";
-const card: React.CSSProperties = { background: "rgba(255,255,255,0.045)", border: "1px solid rgba(255,255,255,0.07)" };
+const card: React.CSSProperties = { background: "linear-gradient(160deg, hsl(258 35% 14% / 0.85), hsl(258 35% 9% / 0.85))", border: "1px solid hsl(271 40% 28% / 0.5)", boxShadow: "inset 0 1px 0 rgba(255,255,255,0.06), inset 0 -1px 0 rgba(0,0,0,0.4), 0 4px 16px rgba(0,0,0,0.25)" };
 
 const mock = [
   { id: 1, name: "Олена К.", tgid: "123456789", first: "01.03.2026", last: "21.04.2026", active: true, msgs: 47, reactions: 12, longGone: false, deletedChat: false, tags: ["клієнт", "будівництво"] },

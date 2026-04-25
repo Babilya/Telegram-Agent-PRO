@@ -121,7 +121,8 @@ router.get("/system/export", async (_req, res) => {
       db.select().from(forwardFiltersTable).orderBy(desc(forwardFiltersTable.createdAt)),
       db.select({
         id: mirrorsTable.id, ownerName: mirrorsTable.ownerName, ownerTelegramId: mirrorsTable.ownerTelegramId,
-        phone: mirrorsTable.phone, status: mirrorsTable.status, lastSync: mirrorsTable.lastSync, createdAt: mirrorsTable.createdAt,
+        accessKey: mirrorsTable.accessKey, enabled: mirrorsTable.enabled,
+        phone: mirrorsTable.phone, status: mirrorsTable.status, createdAt: mirrorsTable.createdAt,
       }).from(mirrorsTable).orderBy(desc(mirrorsTable.createdAt)),
       db.select().from(messageLogsTable).orderBy(desc(messageLogsTable.createdAt)).limit(2000),
       db.select().from(contactProfilesTable).orderBy(desc(contactProfilesTable.createdAt)),

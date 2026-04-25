@@ -133,8 +133,33 @@
   * {
     @apply border-border;
   }
+  html, body, #root {
+    height: 100%;
+    min-height: 100dvh;
+  }
   body {
-    @apply font-sans antialiased bg-background text-foreground;
+    @apply font-sans antialiased text-foreground;
+    background:
+      radial-gradient(ellipse 90% 55% at 50% 0%, hsl(271 91% 38% / 0.55) 0%, transparent 70%),
+      radial-gradient(ellipse 65% 50% at 85% 100%, hsl(316 90% 40% / 0.3) 0%, transparent 65%),
+      radial-gradient(ellipse 70% 55% at 15% 90%, hsl(258 80% 28% / 0.4) 0%, transparent 65%),
+      hsl(258 38% 8%);
+    background-attachment: fixed;
+  }
+  body::before {
+    content: "";
+    position: fixed;
+    inset: 0;
+    pointer-events: none;
+    z-index: 0;
+    background-image:
+      linear-gradient(hsl(271 91% 65% / 0.05) 1px, transparent 1px),
+      linear-gradient(90deg, hsl(271 91% 65% / 0.05) 1px, transparent 1px);
+    background-size: 40px 40px;
+  }
+  #root {
+    position: relative;
+    z-index: 1;
   }
 }
 

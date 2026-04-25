@@ -263,14 +263,21 @@ export function AuthModal({ onClose, onSuccess }: AuthModalProps) {
 
   return (
     <div
-      className="fixed inset-0 z-50 flex items-end sm:items-center justify-center"
-      style={{ background: "rgba(5,3,14,0.65)", backdropFilter: "blur(16px)" }}
+      className="fixed inset-0 z-50 flex items-center justify-center p-4"
+      style={{
+        background: "rgba(5,3,14,0.65)",
+        backdropFilter: "blur(16px)",
+        paddingTop: "max(1rem, env(safe-area-inset-top, 1rem))",
+        paddingBottom: "max(1rem, env(safe-area-inset-bottom, 1rem))",
+        paddingLeft: "max(1rem, env(safe-area-inset-left, 1rem))",
+        paddingRight: "max(1rem, env(safe-area-inset-right, 1rem))",
+      }}
       onClick={(e) => e.target === e.currentTarget && onClose()}
     >
       {/* Neon grid overlay inside modal area */}
       <div
-        className="relative w-full sm:max-w-[420px] rounded-t-[28px] sm:rounded-[28px] overflow-hidden flex flex-col"
-        style={{ background: MODAL_BG, boxShadow: MODAL_SHADOW, maxHeight: "92dvh" }}
+        className="relative w-full max-w-[420px] rounded-[28px] overflow-hidden flex flex-col"
+        style={{ background: MODAL_BG, boxShadow: MODAL_SHADOW, maxHeight: "100%" }}
       >
         {/* Subtle neon grid */}
         <div className="absolute inset-0 pointer-events-none"

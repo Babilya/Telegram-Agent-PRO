@@ -14,14 +14,14 @@ export function Layout({ children }: { children: ReactNode }) {
   });
 
   return (
-    <div className="flex flex-col bg-background text-foreground font-sans"
+    <div className="flex flex-col text-foreground font-sans"
       style={{ height: "100dvh" }}>
       {/* Top header */}
       <header className="shrink-0 flex items-center justify-between px-4 h-12"
         style={{
-          background: "hsl(258 40% 6% / 0.9)",
-          backdropFilter: "blur(12px)",
-          borderBottom: "1px solid hsl(258 30% 16%)",
+          background: "hsl(258 40% 6% / 0.55)",
+          backdropFilter: "blur(14px)",
+          borderBottom: "1px solid rgba(255,255,255,0.06)",
         }}>
         <Link href="/dashboard" className="flex items-center gap-2">
           <div className="w-7 h-7 rounded-lg flex items-center justify-center"

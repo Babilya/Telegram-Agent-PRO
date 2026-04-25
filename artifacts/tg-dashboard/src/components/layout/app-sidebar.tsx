@@ -81,7 +81,7 @@ export function AppSidebar({ onClose }: AppSidebarProps) {
             style={{ background: "linear-gradient(135deg, hsl(271 91% 65%), hsl(316 90% 62%))" }}>
             <Zap className="h-4 w-4 text-white" />
           </div>
-          SHADOW
+          GROUP AGENT
         </Link>
         {onClose && (
           <button

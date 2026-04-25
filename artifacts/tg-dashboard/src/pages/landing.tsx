@@ -65,7 +65,7 @@ const logoIcon: React.CSSProperties = {
 
 const pages = [
   {
-    badge: "SHADOW AGENT PRO",
+    badge: "GROUP AGENT PRO",
     title: "Telegram під",
     accent: "контролем",
     desc: "Усе ваше Telegram-життя в одному місці: автоматичні розсилки, моніторинг, дзеркала акаунтів і повна аналітика — від вашого імені.",

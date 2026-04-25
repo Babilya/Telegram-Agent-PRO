@@ -188,7 +188,14 @@ export function AuthModal({ onClose, onSuccess }: AuthModalProps) {
 
   const phoneForm = useForm<{ phone: string }>({
     resolver: zodResolver(z.object({
-      phone: z.string().regex(/^\+\d{10,15}$/, "Формат: +380XXXXXXXXX"),
+      phone: z.string()
+        .transform((v) => {
+          const digits = v.replace(/[^\d]/g, "");
+          return digits ? `+${digits}` : "";
+        })
+        .refine((v) => /^\+\d{10,15}$/.test(v), {
+          message: "Введіть від 10 до 15 цифр (напр. +38 050 777 11 11)",
+        }),
     })),
     defaultValues: { phone: "" },
   });
@@ -415,7 +422,9 @@ export function AuthModal({ onClose, onSuccess }: AuthModalProps) {
                   <input
                     {...phoneForm.register("phone")}
                     type="tel"
-                    placeholder="+380XXXXXXXXX"
+                    inputMode="tel"
+                    autoComplete="tel"
+                    placeholder="+38 (050) 777 11 11"
                     className={inputBase}
                     style={inputSt}
                     onFocus={(e) => Object.assign(e.currentTarget.style, inputFocusSt)}
